@@ -1,0 +1,60 @@
+body {
+border: 3px solid #f00;
+}
+.chatBox {
+border: 3px solid #ffc165;
+height: 100%;
+}
+.chatBox .authUser {
+border: 3px solid #ff4758;
+width: 50px;
+height: 50px;
+display: inline-block;
+box-sizing: border-box;
+vertical-align: top;
+}
+.messagesBox {
+height: calc(100% - 150px);
+overflow-y: scroll;
+}
+.messageInputBox {
+display: inline-block;
+border: 3px solid #53d6ff;
+padding: 10px;
+width: calc(100% - 50px);
+box-sizing: border-box;
+}
+.messageInputBox textarea {
+width: 100%;
+}
+.messageBox {
+position: relative;
+}
+.messageBox .user {
+box-sizing: border-box;
+border: 3px solid #ff6ce6;
+display: inline-block;
+width: 50px;
+height: 50px;
+}
+.messageBox .text {
+box-sizing: border-box;
+vertical-align: top;
+border: 3px solid #af3dff;
+display: inline-block;
+width: calc(100% - 50px);
+}
+.messageBox .time {
+position: absolute;
+top: 0;
+right: 10px;
+}
+.sendMessage {
+padding: 10px;
+width: 100%;
+}
+.answerBox {
+border: 2px solid #8dff13;
+height: 150px;
+box-sizing: border-box;
+}

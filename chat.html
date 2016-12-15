@@ -1,0 +1,28 @@
+<head>
+  <link rel="stylesheet" href="m/css/screen.css" type="text/css" />
+  <script src="http://185.98.87.28:8081/socket.io/socket.io.js"></script>
+  <script src="m/js/mootools-core.js"></script>
+  <script src="m/js/mootools-more.js"></script>
+  <script src="http://185.98.87.28:8081/js/microevent.js"></script>
+
+  <script src="m/js/Chat.js"></script>
+  <script src="m/js/ChatBox.js"></script>
+  <script src="m/js/ChatMessagesBox.js"></script>
+  <script src="m/js/MessageBox.js"></script>
+  <script src="m/js/MessageInputBox.js"></script>
+  <script src="m/js/SendMessageButton.js"></script>
+
+  <script src="m/js/users.js"></script>
+  <script src="m/js/config.js"></script>
+</head>
+<body>
+  <script>
+    var chatBox;
+    if (window.location.hash) {
+      chatBox = new ChatBox(users.Anton, users.sad, window.location.hash.replace(/#(.*)/, '$1'));
+    } else {
+      chatBox = new ChatBox(users.sad, users.Anton);
+    }
+    chatBox.container.inject(document.getElement('body'));
+  </script>
+</body>
