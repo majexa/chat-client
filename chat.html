@@ -5,24 +5,29 @@
   <script src="m/js/mootools-more.js"></script>
   <script src="http://185.98.87.28:8081/js/microevent.js"></script>
 
-  <script src="m/js/Chat.js"></script>
+  <script src="m/js/ChatApi.js"></script>
+  <script src="m/js/ChatByPhone.js"></script>
   <script src="m/js/ChatBox.js"></script>
   <script src="m/js/ChatMessagesBox.js"></script>
   <script src="m/js/MessageBox.js"></script>
   <script src="m/js/MessageInputBox.js"></script>
   <script src="m/js/SendMessageButton.js"></script>
+  <script src="m/js/ChatBoxConnect.js"></script>
 
   <script src="m/js/users.js"></script>
   <script src="m/js/config.js"></script>
 </head>
 <body>
   <script>
-    var chatBox;
-    if (window.location.hash) {
-      chatBox = new ChatBox(users.Anton, users.sad, window.location.hash.replace(/#(.*)/, '$1'));
+    var m = window.location.hash.match(/#(.+)\/(\d+)/);
+    if (m) {
+      console.log([m[1], m[2]]);
+      new ChatBoxConnect(
+        new ChatByPhone(users[m[1]], m[2], config),
+        new ChatBox(document.getElement('body'))
+      ).start();
     } else {
-      chatBox = new ChatBox(users.sad, users.Anton);
+      alert('add anchor #login/recipientPhone');
     }
-    chatBox.container.inject(document.getElement('body'));
   </script>
 </body>

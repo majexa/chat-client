@@ -5,9 +5,9 @@ class ChatMessagesBox
     @_addMessage(userInfo, text, timestamp)
     @scrollBottom()
   _addMessage: (userInfo, text, timestamp) ->
-    new MessageBox(@, userInfo, text, timestamp)
-
+    mine = @chatBox.userInfo._id == userInfo._id
+    new MessageBox(@, mine, userInfo, text, timestamp)
   scrollBottom: () ->
-    new Fx.Scroll(@container).toBottom();
+    @container.scrollTop = @container.scrollHeight;
 
 window.ChatMessagesBox = ChatMessagesBox
