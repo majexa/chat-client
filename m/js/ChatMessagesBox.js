@@ -6,17 +6,18 @@
     function ChatMessagesBox(chatBox) {
       this.chatBox = chatBox;
       this.container = new Element('div.messagesBox').inject(this.chatBox.container);
+      this.messageBoxes = {};
     }
 
-    ChatMessagesBox.prototype.addMessage = function(userInfo, text, timestamp) {
-      this._addMessage(userInfo, text, timestamp);
+    ChatMessagesBox.prototype.addMessage = function(userInfo, message) {
+      this._addMessage(userInfo, message);
       return this.scrollBottom();
     };
 
-    ChatMessagesBox.prototype._addMessage = function(userInfo, text, timestamp) {
+    ChatMessagesBox.prototype._addMessage = function(userInfo, message) {
       var mine;
       mine = this.chatBox.userInfo._id === userInfo._id;
-      return new MessageBox(this, mine, userInfo, text, timestamp);
+      return this.messageBoxes[message._id] = new MessageBox(this, mine, userInfo, message);
     };
 
     ChatMessagesBox.prototype.scrollBottom = function() {

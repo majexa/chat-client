@@ -1,7 +1,10 @@
 class ChatApi
 
   constructor: (@user, @config) ->
+    if !@user
+      throw new Error('user does not defined')
     MicroEvent.mixin @
+    @initDeliveredLogic()
 
   restart: () ->
     @socket.disconnect()
@@ -33,44 +36,8 @@ class ChatApi
   start: () ->
     throw new Error('abstract')
 
-  startChatWithUser: (toUser, onComplete) ->
-    new Request(
-      url: @config.baseUrl + '/api/v1/chat/getOrCreateByTwoUsers'
-      onComplete: ((chat) ->
-        if !chat
-          return
-        chat = JSON.parse(chat)
-        if chat.error
-          throw new Error(chat.error)
-        @data = chat
-        @startSocket @user.token, chat.chatId, onComplete
-      ).bind(@)
-    ).get(
-      token: @user.token
-      userId: toUser._id
-    )
-
-  startChatById: (data, chatId) ->
-    new Request(
-      url: @config.baseUrl + '/api/v1/chat/get'
-      onComplete: ((chat) ->
-        if !chat
-          return
-        chat = JSON.parse(chat)
-        if chat.error
-          throw new Error(chat.error)
-        @data = chat
-        console.log('CHAT BY ID ' + chat.chatId);
-        @startSocket data.token, chat.chatId
-      ).bind(@)
-    ).get(
-      token: data.token
-      chatId: chatId
-    )
-
-  startSocket: (token, chatId, onJoin) ->
+  startSocket: (token) ->
     @token = token
-    @chatId = chatId
     if @config.baseUrl
       socket = io.connect(@config.baseUrl)
     else
@@ -80,12 +47,6 @@ class ChatApi
       socket.emit 'authenticate',
         token: token
     ).bind(@)
-    socket.on 'authenticated', (->
-      @chatId = chatId
-      socket.emit 'join',
-        chatId: chatId
-      onJoin()
-    ).bind(@)
     .on 'event', ((data) ->
       console.log data
       @trigger data.type, data
@@ -93,24 +54,20 @@ class ChatApi
     .on 'unauthorized', (msg) ->
       console.log 'unauthorized: ' + JSON.stringify(msg.data)
 
-  sendUserMessage: (message, userId,  onComplete) ->
-    if !@chatId
-      throw new Error('Chat has not started')
-    new Request(
-      url: @config.baseUrl + '/api/v1/message/userSend',
-      onComplete: onComplete
-    ).get(
-      token: @token
-      userId: userId
-      chatId: @chatId
-      message: message
-    )
+  initDeliveredLogic: (chatId) ->
+    # на уровне АПИ отмечаем как доставленные
+    @bind('newUserMessages', ((data) ->
+      @markAsDelivered(data.messages)
+    ).bind(@))
 
-  loadHistory: () ->
+  loadHistory: ->
     new Request(
       url: @config.baseUrl + '/api/v1/message/list'
       onComplete: ((messages) ->
         messages = JSON.parse(messages)
+        if messages.length == 0
+          return
+        @markAsDelivered(messages)
         @trigger 'historyLoaded', messages
       ).bind(@)
     ).get(
@@ -129,6 +86,66 @@ class ChatApi
       chatId: @chatId
       message: message
     )
+
+  sendUserMessage: (message, userId, onComplete) ->
+    if !@chatId
+      throw new Error('Chat has not started')
+    new Request(
+      url: @config.baseUrl + '/api/v1/message/userSend',
+      onComplete: onComplete
+    ).get(
+      token: @token
+      userId: userId
+      chatId: @chatId
+      message: message
+    )
+
+  loadUserInfo: (userId, onComplete) ->
+    if userId == 'undefined'
+      throw new Error('!');
+    new Request(
+      url: @config.baseUrl + '/api/v1/user/info'
+      onComplete: (data)->
+        data = JSON.parse(data)
+        onComplete(data)
+    ).get(
+      id: userId
+    )
+
+  markAsDelivered: (messages) ->
+    @markAs('delivered', messages)
+
+  markAsViewed: (messages) ->
+    @markAs('viewed', messages)
+
+  ucFirst: (str) ->
+    f = str.charAt(0).toUpperCase()
+    return f + str.substr(1, str.length-1)
+
+  markAs: (keyword, messages) ->
+    messages = messages.filter((message)->
+      return !message[keyword]
+    )
+    if messages.length == 0
+      return
+    # arrange by chatId
+    arrangedMessages = {}
+    for message in messages
+      if !message.chatId
+        throw new Error('message.chatId is required')
+      if !arrangedMessages[message.chatId]
+        arrangedMessages[message.chatId] = []
+      arrangedMessages[message.chatId].push(message)
+    # emit separately by chat
+    eventType = 'markAs' + @ucFirst(keyword)
+    console.log eventType
+    for chatId, messages of arrangedMessages
+      messageIds = messages.map((message)->
+        return message._id
+      )
+      @socket.emit eventType,
+        messageIds: messageIds.join(',')
+        chatId: chatId
 
 ChatApi.tts = (timestamp) ->
   date = new Date(timestamp)

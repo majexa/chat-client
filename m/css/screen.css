@@ -3,6 +3,30 @@ font-family: Verdana;
 font-size: 11px;
 margin: 0;
 }
+.homeBox {
+box-sizing: border-box;
+height: 100%;
+text-align: center;
+padding-top: 10%;
+color: #b5b5b5;
+}
+.homeBox h1 {font-size: 12px}
+@media (min-width: 350px) {
+.homeBox h1 {font-size: 14px}
+}
+@media (min-width: 500px) {
+.homeBox h1 {font-size: 18px}
+}
+@media (min-width: 600px) {
+.homeBox h1 {font-size: 25px}
+}
+@media (min-width: 1000px) {
+.homeBox h1 {font-size: 35px}
+}
+
+.homeBox img {
+width: 30%;
+}
 .chatBox {
 height: 100%;
 }
@@ -29,7 +53,12 @@ height: 30px;
 }
 .titleBox b {
 background: #249c4e;
-padding: 10px 5px;
+font-weight: normal;
+padding: 10px;
+margin: 0px 5px;
+}
+.titleBox b span {
+font-weight: bold;
 }
 .messagesBox {
 height: calc(100% - 100px - 60px);
@@ -110,6 +139,7 @@ position: absolute;
 bottom: -16px;
 right: 120px;
 color: #999;
+cursor: default;
 }
 .messageBox.mine .mark {
 left: 120px;
@@ -132,4 +162,64 @@ box-sizing: border-box;
 color: #999;
 display: inline-block;
 margin-left: 20px;
+}
+
+.usersList {
+width: 150px;
+float: left;
+background: #fff;
+height: 100%;
+box-sizing: border-box;
+border-right: 1px solid #ccc;
+}
+.chatBox {
+height: 100%;
+width: calc(100% - 150px);
+float: left;
+}
+
+.usersList .title {
+font-weight: bold;
+padding: 10px;
+border-bottom: 1px solid #ccc;
+background: #e9e9e9;
+}
+.usersList .title.btn {
+background: #61b534;
+border-bottom: 1px solid #61b534;
+color: #fff;
+cursor: pointer;
+}
+.usersList .title.btn:hover {
+background: #6fcf3b;
+border-bottom: 1px solid #61b534;
+color: #fff;
+}
+
+.usersList .user {
+border-bottom: 1px solid #e9e9e9;
+padding: 5px 10px;
+cursor: pointer;
+position: relative;
+}
+.usersList .user:hover {
+color: #fff;
+background: #af3dff !important;
+border-bottom: 1px solid #af3dff !important;
+}
+.usersList .user.selected {
+background: #ff971f;
+border-bottom: 1px solid #ff971f;
+}
+.usersList .user span {
+position: absolute;
+top: 3px;
+right: 5px;
+background: #3c88ff;
+color: #fff;
+border-radius: 10px;
+padding: 3px;
+font-size: 9px;
+min-width: 13px;
+text-align: center;
 }

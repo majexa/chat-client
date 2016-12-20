@@ -1,8 +1,9 @@
+# connecting api and chat interface logic
 class ChatBoxConnect
 
-  constructor: (@chatApi, @chatBox) ->
+  constructor: (@chatApi, @chatBox, @usersListBox) ->
 
-  start: ->
+  start: (onStart) ->
     @chatApi.start(((toUser) ->
       # startup data for init socket events and interface has loaded
       @toUser = toUser
@@ -14,47 +15,66 @@ class ChatBoxConnect
       # @bindNewUserMessagesEvent()
       @bindNewMessageEvent()
       @bindSendButton()
+      @bindMessageDeliveredStatusChange()
+      if onStart
+        onStart()
     ).bind(@))
     
   initUsers: ->
     @users = {}
-    @users[@chatApi.user._id] = @chatApi.user
-    @users[@toUser._id] = @toUser
+    @addUser(@chatApi.user)
+    @addUser(@toUser)
+
+  addUser: (user) ->
+    @users[user._id] = user
 
   bindNewUserMessagesEvent: ->
-    @chatApi.bind('newUserMessages', ((data) ->
-      for message in data.messages
-      #for i in [data.messages.length - 1..0] by -1
-        #message = data.messages[i]
-        @chatBox.chatMessagesBox._addMessage(
-          message.userId,
-          message.message,
-          message.createTime
-        )
-        @chatBox.chatMessagesBox.scrollBottom()
-    ).bind(@))
+#    console.log 312
+#    @chatApi.bind('newUserMessages', ((data) ->
+#      for message in data.messages
+#        @_addMessage(message)
+#        @chatBox.chatMessagesBox.scrollBottom()
+#      # на уровне интерфейса отмечаем как просмотрееные
+#      @markAsViewed(data.messages)
+#    ).bind(@))
 
   bindNewMessageEvent: ->
     @chatApi.bind('newMessage', ((data) ->
-      @chatBox.chatMessagesBox.addMessage(@users[data.message.userId], data.message.message, data.message.createTime)
+      @addMessage(data.message)
     ).bind(@))
+
+  _addMessage: (message) ->
+    @chatBox.chatMessagesBox._addMessage(@users[message.userId], message)
+
+  messages: [],
+
+  addMessage: (message) ->
+    @messages.push(message)
+    @_addMessage(message)
+    @chatBox.chatMessagesBox.scrollBottom()
+    @markAsViewedRemitted()
+
+  markAsViewedRemitted: ->
+    if @viewedTimeoutId
+      clearTimeout(@viewedTimeoutId)
+    @viewedTimeoutId = setTimeout((->
+      @chatApi.markAsViewed(@messages)
+    ).bind(@), 500)
 
   bindHistoryEvent: ->
     @chatApi.bind('historyLoaded', ((messages)->
       for i in [messages.length - 1..0] by -1
-        message = messages[i]
-        @chatBox.chatMessagesBox.addMessage(
-          @users[message.userId],
-          message.message,
-          message.createTime
-        )
+        @addMessage(messages[i])
       setTimeout((->
         @chatBox.chatMessagesBox.scrollBottom()
       ).bind(@), 1000)
-
     ).bind(@))
 
   bindSendButton: ->
+    @chatBox.messageInputBox.input.addEvent('keypress', ((e)->
+      if e.code == 10 && e.control
+        @sendMessage()
+    ).bind(@))
     @chatBox.sendMessageButton.button.addEvent('click', (->
       @sendMessage()
     ).bind(@))
@@ -65,10 +85,17 @@ class ChatBoxConnect
       return
     @chatBox.messageInputBox.disable()
     @chatBox.sendMessageButton.disable()
-    @chatApi.sendMessage(message, (->
+    @chatApi.sendUserMessage(message, @toUser._id, (->
       @chatBox.messageInputBox.cleanup()
       @chatBox.messageInputBox.enable()
       @chatBox.sendMessageButton.enable()
     ).bind(@))
+
+  bindMessageDeliveredStatusChange: () ->
+    @chatApi.bind('delivered', ((data)->
+      for id in data.messageIds
+        @chatBox.chatMessagesBox.messageBoxes[id].markAsDelivered()
+    ).bind(@))
+
 
 window.ChatBoxConnect = ChatBoxConnect

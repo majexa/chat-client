@@ -3,29 +3,33 @@
   var MessageBox;
 
   MessageBox = (function() {
-    function MessageBox(chatMessageBox, mine, userInfo, text, timestamp) {
-      var eMark, eText;
+    function MessageBox(chatMessageBox, mine, userInfo, message) {
+      var eText;
       this.chatMessageBox = chatMessageBox;
-      this.text = text;
+      this.message = message;
       this.container = new Element('div.messageBox').inject(this.chatMessageBox.container, 'bottom');
+      new Element('div.time', {
+        html: ChatApi.tts(this.message.createTime)
+      }).inject(this.container);
+      this.mark = new Element('div.mark').inject(this.container);
+      eText = new Element('div.text', {
+        html: this.message.message
+      }).inject(this.container);
       if (mine) {
         this.container.addClass('mine');
-      }
-      new Element('div.time', {
-        html: ChatApi.tts(timestamp)
-      }).inject(this.container);
-      eMark = new Element('div.mark', {
-        html: '&#10004;'
-      }).inject(this.container);
-      eText = new Element('div.text', {
-        html: this.text
-      }).inject(this.container);
-      if (mine) {
         new Element('div.arrow.right').inject(eText);
       } else {
         new Element('div.arrow.left').inject(eText);
       }
+      if (this.message.delivered) {
+        this.markAsDelivered();
+      }
     }
+
+    MessageBox.prototype.markAsDelivered = function() {
+      this.mark.set('title', 'Delivered');
+      return this.mark.set('html', '&#10004;');
+    };
 
     return MessageBox;
 

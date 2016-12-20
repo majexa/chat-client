@@ -1,12 +1,13 @@
 class ChatMessagesBox
   constructor: (@chatBox) ->
     @container = new Element('div.messagesBox').inject(@chatBox.container)
-  addMessage: (userInfo, text, timestamp) ->
-    @_addMessage(userInfo, text, timestamp)
+    @messageBoxes = {}
+  addMessage: (userInfo, message) ->
+    @_addMessage(userInfo, message)
     @scrollBottom()
-  _addMessage: (userInfo, text, timestamp) ->
+  _addMessage: (userInfo, message) ->
     mine = @chatBox.userInfo._id == userInfo._id
-    new MessageBox(@, mine, userInfo, text, timestamp)
+    @messageBoxes[message._id] = new MessageBox(@, mine, userInfo, message)
   scrollBottom: () ->
     @container.scrollTop = @container.scrollHeight;
 

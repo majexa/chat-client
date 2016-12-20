@@ -1,33 +1,58 @@
 <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <link rel="stylesheet" href="m/css/screen.css" type="text/css" />
-  <script src="http://185.98.87.28:8081/socket.io/socket.io.js"></script>
+  <script src="http://185.98.87.28:8080/socket.io/socket.io.js"></script>
   <script src="m/js/mootools-core.js"></script>
   <script src="m/js/mootools-more.js"></script>
-  <script src="http://185.98.87.28:8081/js/microevent.js"></script>
+  <script src="http://185.98.87.28:8080/js/microevent.js"></script>
 
   <script src="m/js/ChatApi.js"></script>
-  <script src="m/js/ChatByPhone.js"></script>
+  <script src="m/js/ChatApiStandby.js"></script>
+  <script src="m/js/ChatApiJoined.js"></script>
+  <script src="m/js/ChatApiByPhone.js"></script>
   <script src="m/js/ChatBox.js"></script>
   <script src="m/js/ChatMessagesBox.js"></script>
   <script src="m/js/MessageBox.js"></script>
   <script src="m/js/MessageInputBox.js"></script>
   <script src="m/js/SendMessageButton.js"></script>
   <script src="m/js/ChatBoxConnect.js"></script>
+  <script src="m/js/UsersListBox.js"></script>
+  <script src="m/js/UsersListConnect.js"></script>
+  <script src="m/js/UsersListByPhoneConnect.js"></script>
 
   <script src="m/js/users.js"></script>
   <script src="m/js/config.js"></script>
 </head>
 <body>
   <script>
-    var m = window.location.hash.match(/#(.+)\/(\d+)/);
-    if (m) {
-      console.log([m[1], m[2]]);
-      new ChatBoxConnect(
-        new ChatByPhone(users[m[1]], m[2], config),
-        new ChatBox(document.getElement('body'))
-      ).start();
-    } else {
-      alert('add anchor #login/recipientPhone');
-    }
+    (function() {
+      var matchChatWithUser = window.location.hash.match(/#(.+)\/(\d+)/);
+      if (matchChatWithUser) {
+        var listBox = new UsersListBox(users[matchChatWithUser[1]], false, document.getElement('body'));
+        var api = new ChatApiByPhone(users[matchChatWithUser[1]], matchChatWithUser[2], config);
+        new ChatBoxConnect(
+          api,
+          new ChatBox(document.getElement('body'))
+        ).start(function() {
+          new UsersListByPhoneConnect(
+            api,
+            listBox
+          ).onStart();
+        });
+      } else {
+        var matchStandBy = window.location.hash.match(/#(.+)/);
+        if (matchStandBy) {
+          new UsersListConnect(
+            new ChatApiStandby(users[matchStandBy[1]], config),
+            new UsersListBox(users[matchStandBy[1]], true, document.getElement('body'))
+          ).start();
+          new Element('div.homeBox', {
+            html: '<h1>Mersal Chat Client 0.0.2</h1><img src="m/img/chat.svg">'
+          }).inject(document.getElement('body'));
+        } else {
+          alert('add "#login" anchor for standby screen or "#login/recipientPhone" to chat with user');
+        }
+      }
+    })();
   </script>
 </body>

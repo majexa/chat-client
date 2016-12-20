@@ -3,12 +3,13 @@
   var ChatBoxConnect;
 
   ChatBoxConnect = (function() {
-    function ChatBoxConnect(chatApi, chatBox) {
+    function ChatBoxConnect(chatApi, chatBox, usersListBox) {
       this.chatApi = chatApi;
       this.chatBox = chatBox;
+      this.usersListBox = usersListBox;
     }
 
-    ChatBoxConnect.prototype.start = function() {
+    ChatBoxConnect.prototype.start = function(onStart) {
       return this.chatApi.start((function(toUser) {
         this.toUser = toUser;
         this.initUsers();
@@ -16,42 +17,59 @@
         this.chatApi.loadHistory();
         this.bindHistoryEvent();
         this.bindNewMessageEvent();
-        return this.bindSendButton();
+        this.bindSendButton();
+        this.bindMessageDeliveredStatusChange();
+        if (onStart) {
+          return onStart();
+        }
       }).bind(this));
     };
 
     ChatBoxConnect.prototype.initUsers = function() {
       this.users = {};
-      this.users[this.chatApi.user._id] = this.chatApi.user;
-      return this.users[this.toUser._id] = this.toUser;
+      this.addUser(this.chatApi.user);
+      return this.addUser(this.toUser);
     };
 
-    ChatBoxConnect.prototype.bindNewUserMessagesEvent = function() {
-      return this.chatApi.bind('newUserMessages', (function(data) {
-        var j, len, message, ref, results;
-        ref = data.messages;
-        results = [];
-        for (j = 0, len = ref.length; j < len; j++) {
-          message = ref[j];
-          this.chatBox.chatMessagesBox._addMessage(message.userId, message.message, message.createTime);
-          results.push(this.chatBox.chatMessagesBox.scrollBottom());
-        }
-        return results;
-      }).bind(this));
+    ChatBoxConnect.prototype.addUser = function(user) {
+      return this.users[user._id] = user;
     };
+
+    ChatBoxConnect.prototype.bindNewUserMessagesEvent = function() {};
 
     ChatBoxConnect.prototype.bindNewMessageEvent = function() {
       return this.chatApi.bind('newMessage', (function(data) {
-        return this.chatBox.chatMessagesBox.addMessage(this.users[data.message.userId], data.message.message, data.message.createTime);
+        return this.addMessage(data.message);
       }).bind(this));
+    };
+
+    ChatBoxConnect.prototype._addMessage = function(message) {
+      return this.chatBox.chatMessagesBox._addMessage(this.users[message.userId], message);
+    };
+
+    ChatBoxConnect.prototype.messages = [];
+
+    ChatBoxConnect.prototype.addMessage = function(message) {
+      this.messages.push(message);
+      this._addMessage(message);
+      this.chatBox.chatMessagesBox.scrollBottom();
+      return this.markAsViewedRemitted();
+    };
+
+    ChatBoxConnect.prototype.markAsViewedRemitted = function() {
+      if (this.viewedTimeoutId) {
+        clearTimeout(this.viewedTimeoutId);
+      }
+      return this.viewedTimeoutId = setTimeout((function() {
+        return this.chatApi.markAsViewed(this.messages);
+      }).bind(this), 500);
     };
 
     ChatBoxConnect.prototype.bindHistoryEvent = function() {
       return this.chatApi.bind('historyLoaded', (function(messages) {
-        var i, j, message, ref;
+        var i, j, ref;
         for (i = j = ref = messages.length - 1; j >= 0; i = j += -1) {
-          message = messages[i];
-          this.chatBox.chatMessagesBox.addMessage(this.users[message.userId], message.message, message.createTime);
+          this.addMessage(messages[i]);
         }
         return setTimeout((function() {
           return this.chatBox.chatMessagesBox.scrollBottom();
@@ -60,6 +78,11 @@
     };
 
     ChatBoxConnect.prototype.bindSendButton = function() {
+      this.chatBox.messageInputBox.input.addEvent('keypress', (function(e) {
+        if (e.code === 10 && e.control) {
+          return this.sendMessage();
+        }
+      }).bind(this));
       return this.chatBox.sendMessageButton.button.addEvent('click', (function() {
         return this.sendMessage();
       }).bind(this));
@@ -73,10 +96,23 @@
       }
       this.chatBox.messageInputBox.disable();
       this.chatBox.sendMessageButton.disable();
-      return this.chatApi.sendMessage(message, (function() {
+      return this.chatApi.sendUserMessage(message, this.toUser._id, (function() {
         this.chatBox.messageInputBox.cleanup();
         this.chatBox.messageInputBox.enable();
         return this.chatBox.sendMessageButton.enable();
+      }).bind(this));
+    };
+
+    ChatBoxConnect.prototype.bindMessageDeliveredStatusChange = function() {
+      return this.chatApi.bind('delivered', (function(data) {
+        var id, j, len, ref, results;
+        ref = data.messageIds;
+        results = [];
+        for (j = 0, len = ref.length; j < len; j++) {
+          id = ref[j];
+          results.push(this.chatBox.chatMessagesBox.messageBoxes[id].markAsDelivered());
+        }
+        return results;
       }).bind(this));
     };
 

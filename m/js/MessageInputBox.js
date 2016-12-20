@@ -6,7 +6,9 @@
     function MessageInputBox(chatBox) {
       this.chatBox = chatBox;
       this.container = new Element('div.messageInputBox').inject(this.chatBox.answerBox);
-      this.input = new Element('textarea').inject(this.container);
+      this.input = new Element('textarea', {
+        placeholder: 'Type text here...'
+      }).inject(this.container);
     }
 
     MessageInputBox.prototype.disable = function() {

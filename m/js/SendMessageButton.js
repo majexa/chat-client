@@ -6,7 +6,7 @@
     function SendMessageButton(chatBox) {
       this.chatBox = chatBox;
       this.button = new Element('button.sendMessage').inject(this.chatBox.answerBox);
-      this.button.set('html', 'send');
+      this.button.set('html', 'Send');
     }
 
     SendMessageButton.prototype.disable = function() {

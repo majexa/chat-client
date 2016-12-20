@@ -16,7 +16,7 @@
       } else {
         chatTitle = '';
       }
-      title.set('html', 'Chat with <b>' + toUser.login + '</b>' + chatTitle);
+      title.set('html', 'Chat with <b><span>' + toUser.login + '</span> +' + toUser.phone + '</b>');
       this.chatMessagesBox = new ChatMessagesBox(this);
       this.answerBox = new Element('div.answerBox').inject(this.container);
       new Element('div.authUser', {

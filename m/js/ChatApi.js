@@ -6,7 +6,11 @@
     function ChatApi(user, config) {
       this.user = user;
       this.config = config;
+      if (!this.user) {
+        throw new Error('user does not defined');
+      }
       MicroEvent.mixin(this);
+      this.initDeliveredLogic();
     }
 
     ChatApi.prototype.restart = function() {
@@ -44,68 +48,19 @@
       throw new Error('abstract');
     };
 
-    ChatApi.prototype.startChatWithUser = function(toUser, onComplete) {
-      return new Request({
-        url: this.config.baseUrl + '/api/v1/chat/getOrCreateByTwoUsers',
-        onComplete: (function(chat) {
-          if (!chat) {
-            return;
-          }
-          chat = JSON.parse(chat);
-          if (chat.error) {
-            throw new Error(chat.error);
-          }
-          this.data = chat;
-          return this.startSocket(this.user.token, chat.chatId, onComplete);
-        }).bind(this)
-      }).get({
-        token: this.user.token,
-        userId: toUser._id
-      });
-    };
-
-    ChatApi.prototype.startChatById = function(data, chatId) {
-      return new Request({
-        url: this.config.baseUrl + '/api/v1/chat/get',
-        onComplete: (function(chat) {
-          if (!chat) {
-            return;
-          }
-          chat = JSON.parse(chat);
-          if (chat.error) {
-            throw new Error(chat.error);
-          }
-          this.data = chat;
-          console.log('CHAT BY ID ' + chat.chatId);
-          return this.startSocket(data.token, chat.chatId);
-        }).bind(this)
-      }).get({
-        token: data.token,
-        chatId: chatId
-      });
-    };
-
-    ChatApi.prototype.startSocket = function(token, chatId, onJoin) {
+    ChatApi.prototype.startSocket = function(token) {
       var socket;
       this.token = token;
-      this.chatId = chatId;
       if (this.config.baseUrl) {
         socket = io.connect(this.config.baseUrl);
       } else {
         socket = io.connect();
       }
       this.socket = socket;
-      socket.on('connect', (function() {
+      return socket.on('connect', (function() {
         return socket.emit('authenticate', {
           token: token
         });
-      }).bind(this));
-      return socket.on('authenticated', (function() {
-        this.chatId = chatId;
-        socket.emit('join', {
-          chatId: chatId
-        });
-        return onJoin();
       }).bind(this)).on('event', (function(data) {
         console.log(data);
         return this.trigger(data.type, data);
@@ -114,19 +69,10 @@
       });
     };
 
-    ChatApi.prototype.sendUserMessage = function(message, userId, onComplete) {
-      if (!this.chatId) {
-        throw new Error('Chat has not started');
-      }
-      return new Request({
-        url: this.config.baseUrl + '/api/v1/message/userSend',
-        onComplete: onComplete
-      }).get({
-        token: this.token,
-        userId: userId,
-        chatId: this.chatId,
-        message: message
-      });
+    ChatApi.prototype.initDeliveredLogic = function(chatId) {
+      return this.bind('newUserMessages', (function(data) {
+        return this.markAsDelivered(data.messages);
+      }).bind(this));
     };
 
     ChatApi.prototype.loadHistory = function() {
@@ -134,6 +80,10 @@
         url: this.config.baseUrl + '/api/v1/message/list',
         onComplete: (function(messages) {
           messages = JSON.parse(messages);
+          if (messages.length === 0) {
+            return;
+          }
+          this.markAsDelivered(messages);
           return this.trigger('historyLoaded', messages);
         }).bind(this)
       }).get({
@@ -154,6 +104,85 @@
         chatId: this.chatId,
         message: message
       });
+    };
+
+    ChatApi.prototype.sendUserMessage = function(message, userId, onComplete) {
+      if (!this.chatId) {
+        throw new Error('Chat has not started');
+      }
+      return new Request({
+        url: this.config.baseUrl + '/api/v1/message/userSend',
+        onComplete: onComplete
+      }).get({
+        token: this.token,
+        userId: userId,
+        chatId: this.chatId,
+        message: message
+      });
+    };
+
+    ChatApi.prototype.loadUserInfo = function(userId, onComplete) {
+      if (userId === 'undefined') {
+        throw new Error('!');
+      }
+      return new Request({
+        url: this.config.baseUrl + '/api/v1/user/info',
+        onComplete: function(data) {
+          data = JSON.parse(data);
+          return onComplete(data);
+        }
+      }).get({
+        id: userId
+      });
+    };
+
+    ChatApi.prototype.markAsDelivered = function(messages) {
+      return this.markAs('delivered', messages);
+    };
+
+    ChatApi.prototype.markAsViewed = function(messages) {
+      return this.markAs('viewed', messages);
+    };
+
+    ChatApi.prototype.ucFirst = function(str) {
+      var f;
+      f = str.charAt(0).toUpperCase();
+      return f + str.substr(1, str.length - 1);
+    };
+
+    ChatApi.prototype.markAs = function(keyword, messages) {
+      var arrangedMessages, chatId, eventType, i, len, message, messageIds, results;
+      messages = messages.filter(function(message) {
+        return !message[keyword];
+      });
+      if (messages.length === 0) {
+        return;
+      }
+      arrangedMessages = {};
+      for (i = 0, len = messages.length; i < len; i++) {
+        message = messages[i];
+        if (!message.chatId) {
+          throw new Error('message.chatId is required');
+        }
+        if (!arrangedMessages[message.chatId]) {
+          arrangedMessages[message.chatId] = [];
+        }
+        arrangedMessages[message.chatId].push(message);
+      }
+      eventType = 'markAs' + this.ucFirst(keyword);
+      console.log(eventType);
+      results = [];
+      for (chatId in arrangedMessages) {
+        messages = arrangedMessages[chatId];
+        messageIds = messages.map(function(message) {
+          return message._id;
+        });
+        results.push(this.socket.emit(eventType, {
+          messageIds: messageIds.join(','),
+          chatId: chatId
+        }));
+      }
+      return results;
     };
 
     return ChatApi;
