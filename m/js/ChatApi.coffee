@@ -122,7 +122,15 @@ class ChatApi
     f = str.charAt(0).toUpperCase()
     return f + str.substr(1, str.length-1)
 
+#  markAs: (keyword, messages) ->
+#    setTimeout((->
+#      @_markAs(keyword, messages)
+#    ).bind(@), 1000)
+
   markAs: (keyword, messages) ->
+    messages = messages.filter(((message)->
+      return message.userId != @user._id
+    ).bind(@))
     messages = messages.filter((message)->
       return !message[keyword]
     )

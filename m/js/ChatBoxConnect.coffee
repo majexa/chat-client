@@ -16,6 +16,7 @@ class ChatBoxConnect
       @bindNewMessageEvent()
       @bindSendButton()
       @bindMessageDeliveredStatusChange()
+      @bindMessageViewedStatusChange()
       if onStart
         onStart()
     ).bind(@))
@@ -59,7 +60,8 @@ class ChatBoxConnect
       clearTimeout(@viewedTimeoutId)
     @viewedTimeoutId = setTimeout((->
       @chatApi.markAsViewed(@messages)
-    ).bind(@), 500)
+      @messages = []
+    ).bind(@), 100)
 
   bindHistoryEvent: ->
     @chatApi.bind('historyLoaded', ((messages)->
@@ -95,6 +97,12 @@ class ChatBoxConnect
     @chatApi.bind('delivered', ((data)->
       for id in data.messageIds
         @chatBox.chatMessagesBox.messageBoxes[id].markAsDelivered()
+    ).bind(@))
+
+  bindMessageViewedStatusChange: () ->
+    @chatApi.bind('viewed', ((data)->
+      for id in data.messageIds
+        @chatBox.chatMessagesBox.messageBoxes[id].markAsViewed()
     ).bind(@))
 
 

@@ -19,4 +19,8 @@ class MessageBox
     @mark.set('title', 'Delivered')
     @mark.set('html', '&#10004;')
 
+  markAsViewed: ->
+    @mark.set('title', 'Viewed')
+    @mark.set('html', '&#128065;')
+
 window.MessageBox = MessageBox

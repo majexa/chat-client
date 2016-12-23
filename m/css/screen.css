@@ -136,10 +136,11 @@ left: 20px;
 }
 .messageBox .mark {
 position: absolute;
-bottom: -16px;
+bottom: -18px;
 right: 120px;
 color: #999;
 cursor: default;
+    font-size: 16px;
 }
 .messageBox.mine .mark {
 left: 120px;
