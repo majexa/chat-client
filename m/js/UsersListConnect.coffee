@@ -9,7 +9,16 @@ class UsersListConnect
     ).bind(@))
 
   onStart: ->
+    @loadContactsFromMessages()
     @waitForNewUserMessages()
+
+  loadContactsFromMessages: ->
+    @chatApi.request('contacts/getFromMessages', {
+      token: @chatApi.token
+    }, ((userIds)->
+      for userId in userIds
+        @addToNewUsersList(userId, 0)
+    ).bind(@))
 
   waitForNewUserMessages: ->
     @chatApi.bind('newUserMessages', ((data) ->
@@ -26,7 +35,7 @@ class UsersListConnect
     @chatApi.loadUserInfo(userId, ((user)->
       if @chatApi.toUser && @chatApi.toUser._id == user._id # TODO hack. move to UsersListByPhoneConnect
         user.selected = true
-      @usersListBox.addNewUser(user, messagesCount)
+      @usersListBox.addUser(user, messagesCount)
     ).bind(@))
 
 window.UsersListConnect = UsersListConnect

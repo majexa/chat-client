@@ -7,14 +7,16 @@
   ChatApiStandby = (function(superClass) {
     extend(ChatApiStandby, superClass);
 
-    function ChatApiStandby() {
-      return ChatApiStandby.__super__.constructor.apply(this, arguments);
+    function ChatApiStandby(user, config) {
+      if (!user.token) {
+        console.error(user);
+        throw new Error('user object must have token param');
+      }
+      ChatApiStandby.__super__.constructor.call(this, user.token, config);
     }
 
     ChatApiStandby.prototype.start = function(onStart) {
-      return this.login((function() {
-        return this.startSocket(this.user.token, onStart);
-      }).bind(this));
+      return this.startSocket(this.token, onStart);
     };
 
     ChatApiStandby.prototype.startSocket = function(token, onAuthenticated) {

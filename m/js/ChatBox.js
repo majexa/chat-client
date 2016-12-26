@@ -8,7 +8,7 @@
     }
 
     ChatBox.prototype.build = function(user, toUser, chatTitle) {
-      var title;
+      var loginText, title;
       this.userInfo = user;
       title = new Element('div.titleBox').inject(this.container);
       if (chatTitle) {
@@ -16,7 +16,12 @@
       } else {
         chatTitle = '';
       }
-      title.set('html', 'Chat with <b><span>' + toUser.login + '</span> +' + toUser.phone + '</b>');
+      if (toUser.login) {
+        loginText = '<span>' + toUser.login + '</span> ';
+      } else {
+        loginText = '';
+      }
+      title.set('html', 'Chat with <b>' + loginText + '+' + toUser.phone + '</b>');
       this.chatMessagesBox = new ChatMessagesBox(this);
       this.answerBox = new Element('div.answerBox').inject(this.container);
       new Element('div.authUser', {

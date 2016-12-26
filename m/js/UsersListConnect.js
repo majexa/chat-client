@@ -15,7 +15,22 @@
     };
 
     UsersListConnect.prototype.onStart = function() {
+      this.loadContactsFromMessages();
       return this.waitForNewUserMessages();
+    };
+
+    UsersListConnect.prototype.loadContactsFromMessages = function() {
+      return this.chatApi.request('contacts/getFromMessages', {
+        token: this.chatApi.token
+      }, (function(userIds) {
+        var i, len, results, userId;
+        results = [];
+        for (i = 0, len = userIds.length; i < len; i++) {
+          userId = userIds[i];
+          results.push(this.addToNewUsersList(userId, 0));
+        }
+        return results;
+      }).bind(this));
     };
 
     UsersListConnect.prototype.waitForNewUserMessages = function() {
@@ -43,7 +58,7 @@
         if (this.chatApi.toUser && this.chatApi.toUser._id === user._id) {
           user.selected = true;
         }
-        return this.usersListBox.addNewUser(user, messagesCount);
+        return this.usersListBox.addUser(user, messagesCount);
       }).bind(this));
     };
 

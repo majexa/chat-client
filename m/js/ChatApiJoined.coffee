@@ -25,10 +25,10 @@ class ChatApiJoined extends ChatApi
         if chat.error
           throw new Error(chat.error)
         @data = chat
-        @startSocket @user.token, chat.chatId, onComplete
+        @startSocket @token, chat.chatId, onComplete
       ).bind(@)
     ).get(
-      token: @user.token
+      token: @token
       userId: toUser._id
     )
 

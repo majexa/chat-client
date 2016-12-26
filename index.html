@@ -1,0 +1,59 @@
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link rel="stylesheet" href="m/css/screen.css" type="text/css"/>
+  <script src="http://185.98.87.28:8081/socket.io/socket.io.js"></script>
+  <script src="m/js/mootools-core.js"></script>
+  <script src="m/js/mootools-more.js"></script>
+  <script src="m/js/Ngn.LocalStorage.js"></script>
+  <script src="http://185.98.87.28:8081/js/microevent.js"></script>
+  <script src="m/js/ChatApiBasic.js"></script>
+  <script src="m/js/ChatApi.js"></script>
+  <script src="m/js/ChatApiStandby.js"></script>
+  <script src="m/js/ChatApiJoined.js"></script>
+  <script src="m/js/ChatApiByPhone.js"></script>
+  <script src="m/js/LoginBox.js"></script>
+  <script src="m/js/LoginBoxConnect.js"></script>
+  <script src="m/js/ChatBox.js"></script>
+  <script src="m/js/ChatMessagesBox.js"></script>
+  <script src="m/js/MessageBox.js"></script>
+  <script src="m/js/MessageInputBox.js"></script>
+  <script src="m/js/SendMessageButton.js"></script>
+  <script src="m/js/ChatBoxConnect.js"></script>
+  <script src="m/js/UsersListBox.js"></script>
+  <script src="m/js/UsersListConnect.js"></script>
+  <script src="m/js/UsersListByPhoneConnect.js"></script>
+  <script src="m/js/config.js"></script>
+</head>
+<body>
+<script>
+  (function() {
+    var user = Ngn.LocalStorage.json.get('user');
+    if (!user) {
+      new LoginBoxConnect( //
+        new ChatApiBasic(config), //
+        new LoginBox(document.getElement('body')) //
+      );
+      return;
+    }
+    var matchChatWithUser = window.location.hash.match(/#(\d+)/);
+    if (matchChatWithUser) {
+      var listBox = new UsersListBox(user, false, document.getElement('body'));
+      var api = new ChatApiByPhone(user, matchChatWithUser[1], config);
+      new ChatBoxConnect( //
+        api, //
+        new ChatBox(document.getElement('body'))).start(function() { //
+          new UsersListByPhoneConnect(api, listBox).onStart(); //
+        });
+    } else {
+      console.log(user);
+      new UsersListConnect( //
+        new ChatApiStandby(user, config), //
+        new UsersListBox(user, true, document.getElement('body')) //
+      ).start();
+      new Element('div.homeBox', {
+        html: '<h1>Mersal Chat Client 0.0.2</h1><img src="m/img/chat.svg">'
+      }).inject(document.getElement('body'));
+    }
+  })();
+</script>
+</body>

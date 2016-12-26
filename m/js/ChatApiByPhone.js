@@ -8,18 +8,17 @@
     extend(ChatApiByPhone, superClass);
 
     function ChatApiByPhone(user, phone, config) {
+      this.user = user;
       this.phone = phone;
-      ChatApiByPhone.__super__.constructor.call(this, user, config);
+      ChatApiByPhone.__super__.constructor.call(this, this.user.token, config);
     }
 
     ChatApiByPhone.prototype.start = function(onStart) {
-      return this.login((function() {
-        return this.getUserInfo(this.phone, (function(toUser) {
-          return this.startChatWithUser(toUser, (function() {
-            this.toUser = toUser;
-            this.started = true;
-            return onStart(toUser);
-          }).bind(this));
+      return this.loadUserInfo(this.phone, (function(toUser) {
+        return this.startChatWithUser(toUser, (function() {
+          this.toUser = toUser;
+          this.started = true;
+          return onStart(toUser);
         }).bind(this));
       }).bind(this));
     };

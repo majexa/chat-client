@@ -7,8 +7,8 @@
   ChatApi = (function(superClass) {
     extend(ChatApi, superClass);
 
-    function ChatApi(token, config) {
-      this.token = token;
+    function ChatApi(user, config) {
+      this.user = user;
       this.config = config;
       MicroEvent.mixin(this);
       this.initDeliveredLogic();
@@ -19,8 +19,30 @@
       return this.socket.connect();
     };
 
+    ChatApi.prototype.loadUserInfo = function(phone, onComplete) {
+      return new Request({
+        url: this.config.baseUrl + '/api/v1/user/info',
+        onComplete: (function(userInfo) {
+          userInfo = JSON.parse(userInfo);
+          return onComplete(userInfo);
+        })
+      }).get({
+        phone: phone
+      });
+    };
+
     ChatApi.prototype.login = function(onComplete) {
-      throw new Error('login is not supported');
+      return new Request({
+        url: this.config.baseUrl + '/api/v1/login',
+        onComplete: (function(data) {
+          data = JSON.parse(data);
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          this.user = Object.assign(this.user, data);
+          return onComplete();
+        }).bind(this)
+      }).get(this.user);
     };
 
     ChatApi.prototype.start = function() {
@@ -79,28 +101,19 @@
       });
     };
 
-    ChatApi.prototype.loadUserInfo = function(phoneOrId, onComplete) {
-      if (phoneOrId.length === 11) {
-        return new Request({
-          url: this.config.baseUrl + '/api/v1/user/info',
-          onComplete: (function(userInfo) {
-            userInfo = JSON.parse(userInfo);
-            return onComplete(userInfo);
-          })
-        }).get({
-          phone: phoneOrId
-        });
-      } else {
-        return new Request({
-          url: this.config.baseUrl + '/api/v1/user/info',
-          onComplete: (function(userInfo) {
-            userInfo = JSON.parse(userInfo);
-            return onComplete(userInfo);
-          })
-        }).get({
-          id: phoneOrId
-        });
+    ChatApi.prototype.loadUserInfo = function(userId, onComplete) {
+      if (userId === 'undefined') {
+        throw new Error('!');
       }
+      return new Request({
+        url: this.config.baseUrl + '/api/v1/user/info',
+        onComplete: function(data) {
+          data = JSON.parse(data);
+          return onComplete(data);
+        }
+      }).get({
+        id: userId
+      });
     };
 
     ChatApi.prototype.markAsDelivered = function(messages) {
@@ -173,4 +186,4 @@
 
 }).call(this);
 
-//# sourceMappingURL=ChatApi.js.map
+//# sourceMappingURL=ChatApiOld.js.map

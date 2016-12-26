@@ -1,16 +1,14 @@
 class ChatApiByPhone extends ChatApiJoined
 
-  constructor: (user, @phone, config)->
-    super(user, config)
+  constructor: (@user, @phone, config)->
+    super(@user.token, config)
 
   start: (onStart) ->
-    @login((->
-      @getUserInfo(@phone, ((toUser)->
-        @startChatWithUser(toUser, (->
-          @toUser = toUser
-          @started = true
-          onStart(toUser)
-        ).bind(@))
+    @loadUserInfo(@phone, ((toUser)->
+      @startChatWithUser(toUser, (->
+        @toUser = toUser
+        @started = true
+        onStart(toUser)
       ).bind(@))
     ).bind(@))
 

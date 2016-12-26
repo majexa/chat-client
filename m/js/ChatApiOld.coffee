@@ -1,6 +1,6 @@
 class ChatApi extends ChatApiBasic
 
-  constructor: (@token, @config) ->
+  constructor: (@user, @config) ->
     MicroEvent.mixin @
     @initDeliveredLogic()
 
@@ -8,8 +8,28 @@ class ChatApi extends ChatApiBasic
     @socket.disconnect()
     @socket.connect()
 
+  loadUserInfo: (phone, onComplete) ->
+    new Request(
+      url: @config.baseUrl + '/api/v1/user/info'
+      onComplete: ((userInfo) ->
+        userInfo = JSON.parse(userInfo)
+        onComplete(userInfo)
+      )
+    ).get(
+      phone: phone
+    )
+
   login: (onComplete) ->
-    throw new Error('login is not supported');
+    new Request(
+      url: @config.baseUrl + '/api/v1/login'
+      onComplete: ((data) ->
+        data = JSON.parse(data)
+        if data.error
+          throw new Error(data.error)
+        @user = Object.assign(@user, data)
+        onComplete()
+      ).bind(@)
+    ).get(@user)
 
   start: () ->
     throw new Error('abstract')
@@ -60,27 +80,17 @@ class ChatApi extends ChatApiBasic
       message: message
     )
 
-  loadUserInfo: (phoneOrId, onComplete) ->
-    if phoneOrId.length == 11
-      new Request(
-        url: @config.baseUrl + '/api/v1/user/info'
-        onComplete: ((userInfo) ->
-          userInfo = JSON.parse(userInfo)
-          onComplete(userInfo)
-        )
-      ).get(
-        phone: phoneOrId
-      )
-    else
-      new Request(
-        url: @config.baseUrl + '/api/v1/user/info'
-        onComplete: ((userInfo) ->
-          userInfo = JSON.parse(userInfo)
-          onComplete(userInfo)
-        )
-      ).get(
-        id: phoneOrId
-      )
+  loadUserInfo: (userId, onComplete) ->
+    if userId == 'undefined'
+      throw new Error('!');
+    new Request(
+      url: @config.baseUrl + '/api/v1/user/info'
+      onComplete: (data)->
+        data = JSON.parse(data)
+        onComplete(data)
+    ).get(
+      id: userId
+    )
 
   markAsDelivered: (messages) ->
     @markAs('delivered', messages)
@@ -129,7 +139,7 @@ ChatApi.tts = (timestamp) ->
   date = new Date(timestamp)
   hours = date.getHours()
   monthNames = ["January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"
+    "July", "August", "September", "October", "November", "December"
   ];
   minutes = "0" + date.getMinutes()
   formattedTime = date.getDate() + ' ' + monthNames[date.getMonth()] + ' ' + hours + ':' + minutes.substr(-2)

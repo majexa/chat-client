@@ -42,10 +42,10 @@
             throw new Error(chat.error);
           }
           this.data = chat;
-          return this.startSocket(this.user.token, chat.chatId, onComplete);
+          return this.startSocket(this.token, chat.chatId, onComplete);
         }).bind(this)
       }).get({
-        token: this.user.token,
+        token: this.token,
         userId: toUser._id
       });
     };

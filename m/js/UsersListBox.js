@@ -8,16 +8,30 @@
       this.isHomePage = isHomePage;
       this.container = new Element('div.usersList').inject(parent);
       this.initHomeButton();
-      this.newUsers = new Element('div.title', {
+      new Element('div.title', {
         html: 'Contacts'
       }).inject(this.container);
       this.contacts = new Element('div.contacts').inject(this.container);
-      this.newUsers = new Element('div.title', {
+      new Element('div.title', {
         html: 'New Users'
       }).inject(this.container);
       this.newUsers = new Element('div.newUsers').inject(this.container);
+      this.initLogoutButton();
       this.users = {};
     }
+
+    UsersListBox.prototype.initLogoutButton = function() {
+      var logoutBtn;
+      logoutBtn = new Element('div.title.btn', {
+        html: 'Logout'
+      }).inject(this.container);
+      return logoutBtn.addEvent('click', function(e) {
+        e.preventDefault();
+        Ngn.LocalStorage.remove('user');
+        window.location = './';
+        return window.location.reload(true);
+      });
+    };
 
     UsersListBox.prototype.initHomeButton = function() {
       if (!this.isHomePage) {
@@ -25,21 +39,32 @@
           html: '« Go home'
         }).inject(this.container);
         return this.homePageBtn.addEvent('click', function() {
-          window.location.hash = window.location.hash.replace(/#(.*)\/(\d+)/, '#$1');
+          window.location.hash = '';
           return window.location.reload(true);
         });
       }
     };
 
-    UsersListBox.prototype._addNewUser = function(user, messagesCount) {
+    UsersListBox.prototype._addUser = function(user, messagesCount, isNew) {
+      var container, countTag;
       if (this.users[user._id]) {
         return false;
       }
+      if (isNew) {
+        container = this.newUsers;
+      } else {
+        container = this.contacts;
+      }
       this.users[user._id] = user;
       this.users[user._id].messageCount = messagesCount;
+      if (this.users[user._id].messageCount) {
+        countTag = '<span>' + this.users[user._id].messageCount + '</span>';
+      } else {
+        countTag = '';
+      }
       this.users[user._id].el = new Element('div.user', {
-        html: user.login + '<span>' + this.users[user._id].messageCount + '</span>'
-      }).inject(this.container);
+        html: (user.login || user.phone) + countTag
+      }).inject(container);
       if (user.selected) {
         this.users[user._id].el.addClass('selected');
       }
@@ -49,8 +74,8 @@
       return true;
     };
 
-    UsersListBox.prototype.addNewUser = function(user, messagesCount) {
-      if (this._addNewUser(user, messagesCount) === true) {
+    UsersListBox.prototype.addUser = function(user, messagesCount) {
+      if (this._addUser(user, messagesCount) === true) {
         return;
       }
       this.users[user._id].messageCount += messagesCount;
@@ -58,7 +83,7 @@
     };
 
     UsersListBox.prototype.openChat = function(phone) {
-      window.location = './chat.html#' + this.user.login + '/' + phone;
+      window.location.hash = '#' + phone;
       return window.location.reload(true);
     };
 
