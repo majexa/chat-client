@@ -1,0 +1,11 @@
+[
+  {
+    "title": "Name",
+    "name": "login"
+  },
+  {
+    "title": "Avatar",
+    "name": "image",
+    "type": "image"
+  }
+]

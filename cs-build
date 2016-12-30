@@ -1,0 +1,4 @@
+#!/bin/bash
+
+php ./ngn-env/run/run.php cc
+php ./ngn-env/run/run.php "new CliAccessArgsSingle('$*', new CsBuildTool, ['runner' => 'cs-build'])" ngn-cs,cs-builder-tool
