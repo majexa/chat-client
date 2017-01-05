@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "LoginDialog.js",
+  "sourceRoot": "",
+  "sources": [
+    "LoginDialog.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA;;AAAA"
+}

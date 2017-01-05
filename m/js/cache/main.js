@@ -5342,6 +5342,192 @@ Fx.CSS.Parsers = {
 /*
 ---
 
+name: Fx.Morph
+
+description: Formerly Fx.Styles, effect to transition any number of CSS properties for an element using an object of rules, or CSS based selector rules.
+
+license: MIT-style license.
+
+requires: Fx.CSS
+
+provides: Fx.Morph
+
+...
+*/
+
+Fx.Morph = new Class({
+
+	Extends: Fx.CSS,
+
+	initialize: function(element, options){
+		this.element = this.subject = document.id(element);
+		this.parent(options);
+	},
+
+	set: function(now){
+		if (typeof now == 'string') now = this.search(now);
+		for (var p in now) this.render(this.element, p, now[p], this.options.unit);
+		return this;
+	},
+
+	compute: function(from, to, delta){
+		var now = {};
+		for (var p in from) now[p] = this.parent(from[p], to[p], delta);
+		return now;
+	},
+
+	start: function(properties){
+		if (!this.check(properties)) return this;
+		if (typeof properties == 'string') properties = this.search(properties);
+		var from = {}, to = {};
+		for (var p in properties){
+			var parsed = this.prepare(this.element, p, properties[p]);
+			from[p] = parsed.from;
+			to[p] = parsed.to;
+		}
+		return this.parent(from, to);
+	}
+
+});
+
+Element.Properties.morph = {
+
+	set: function(options){
+		this.get('morph').cancel().setOptions(options);
+		return this;
+	},
+
+	get: function(){
+		var morph = this.retrieve('morph');
+		if (!morph){
+			morph = new Fx.Morph(this, {link: 'cancel'});
+			this.store('morph', morph);
+		}
+		return morph;
+	}
+
+};
+
+Element.implement({
+
+	morph: function(props){
+		this.get('morph').start(props);
+		return this;
+	}
+
+});
+/*
+---
+
+name: Fx.Transitions
+
+description: Contains a set of advanced transitions to be used with any of the Fx Classes.
+
+license: MIT-style license.
+
+credits:
+  - Easing Equations by Robert Penner, <http://www.robertpenner.com/easing/>, modified and optimized to be used with MooTools.
+
+requires: Fx
+
+provides: Fx.Transitions
+
+...
+*/
+
+Fx.implement({
+
+	getTransition: function(){
+		var trans = this.options.transition || Fx.Transitions.Sine.easeInOut;
+		if (typeof trans == 'string'){
+			var data = trans.split(':');
+			trans = Fx.Transitions;
+			trans = trans[data[0]] || trans[data[0].capitalize()];
+			if (data[1]) trans = trans['ease' + data[1].capitalize() + (data[2] ? data[2].capitalize() : '')];
+		}
+		return trans;
+	}
+
+});
+
+Fx.Transition = function(transition, params){
+	params = Array.convert(params);
+	var easeIn = function(pos){
+		return transition(pos, params);
+	};
+	return Object.append(easeIn, {
+		easeIn: easeIn,
+		easeOut: function(pos){
+			return 1 - transition(1 - pos, params);
+		},
+		easeInOut: function(pos){
+			return (pos <= 0.5 ? transition(2 * pos, params) : (2 - transition(2 * (1 - pos), params))) / 2;
+		}
+	});
+};
+
+Fx.Transitions = {
+
+	linear: function(zero){
+		return zero;
+	}
+
+};
+
+
+
+Fx.Transitions.extend = function(transitions){
+	for (var transition in transitions) Fx.Transitions[transition] = new Fx.Transition(transitions[transition]);
+};
+
+Fx.Transitions.extend({
+
+	Pow: function(p, x){
+		return Math.pow(p, x && x[0] || 6);
+	},
+
+	Expo: function(p){
+		return Math.pow(2, 8 * (p - 1));
+	},
+
+	Circ: function(p){
+		return 1 - Math.sin(Math.acos(p));
+	},
+
+	Sine: function(p){
+		return 1 - Math.cos(p * Math.PI / 2);
+	},
+
+	Back: function(p, x){
+		x = x && x[0] || 1.618;
+		return Math.pow(p, 2) * ((x + 1) * p - x);
+	},
+
+	Bounce: function(p){
+		var value;
+		for (var a = 0, b = 1; 1; a += b, b /= 2){
+			if (p >= (7 - 4 * a) / 11){
+				value = b * b - Math.pow((11 - 6 * a - 11 * p) / 4, 2);
+				break;
+			}
+		}
+		return value;
+	},
+
+	Elastic: function(p, x){
+		return Math.pow(2, 10 * --p) * Math.cos(20 * p * Math.PI * (x && x[0] || 1) / 3);
+	}
+
+});
+
+['Quad', 'Cubic', 'Quart', 'Quint'].each(function(transition, i){
+	Fx.Transitions[transition] = new Fx.Transition(function(p){
+		return Math.pow(p, i + 2);
+	});
+});
+/*
+---
+
 name: Fx.Tween
 
 description: Formerly Fx.Style, effect to transition any CSS property for an element.
@@ -5465,491 +5651,6 @@ Element.implement({
 	}
 
 });
-/*
----
-
-name: Fx.Transitions
-
-description: Contains a set of advanced transitions to be used with any of the Fx Classes.
-
-license: MIT-style license.
-
-credits:
-  - Easing Equations by Robert Penner, <http://www.robertpenner.com/easing/>, modified and optimized to be used with MooTools.
-
-requires: Fx
-
-provides: Fx.Transitions
-
-...
-*/
-
-Fx.implement({
-
-	getTransition: function(){
-		var trans = this.options.transition || Fx.Transitions.Sine.easeInOut;
-		if (typeof trans == 'string'){
-			var data = trans.split(':');
-			trans = Fx.Transitions;
-			trans = trans[data[0]] || trans[data[0].capitalize()];
-			if (data[1]) trans = trans['ease' + data[1].capitalize() + (data[2] ? data[2].capitalize() : '')];
-		}
-		return trans;
-	}
-
-});
-
-Fx.Transition = function(transition, params){
-	params = Array.convert(params);
-	var easeIn = function(pos){
-		return transition(pos, params);
-	};
-	return Object.append(easeIn, {
-		easeIn: easeIn,
-		easeOut: function(pos){
-			return 1 - transition(1 - pos, params);
-		},
-		easeInOut: function(pos){
-			return (pos <= 0.5 ? transition(2 * pos, params) : (2 - transition(2 * (1 - pos), params))) / 2;
-		}
-	});
-};
-
-Fx.Transitions = {
-
-	linear: function(zero){
-		return zero;
-	}
-
-};
-
-
-
-Fx.Transitions.extend = function(transitions){
-	for (var transition in transitions) Fx.Transitions[transition] = new Fx.Transition(transitions[transition]);
-};
-
-Fx.Transitions.extend({
-
-	Pow: function(p, x){
-		return Math.pow(p, x && x[0] || 6);
-	},
-
-	Expo: function(p){
-		return Math.pow(2, 8 * (p - 1));
-	},
-
-	Circ: function(p){
-		return 1 - Math.sin(Math.acos(p));
-	},
-
-	Sine: function(p){
-		return 1 - Math.cos(p * Math.PI / 2);
-	},
-
-	Back: function(p, x){
-		x = x && x[0] || 1.618;
-		return Math.pow(p, 2) * ((x + 1) * p - x);
-	},
-
-	Bounce: function(p){
-		var value;
-		for (var a = 0, b = 1; 1; a += b, b /= 2){
-			if (p >= (7 - 4 * a) / 11){
-				value = b * b - Math.pow((11 - 6 * a - 11 * p) / 4, 2);
-				break;
-			}
-		}
-		return value;
-	},
-
-	Elastic: function(p, x){
-		return Math.pow(2, 10 * --p) * Math.cos(20 * p * Math.PI * (x && x[0] || 1) / 3);
-	}
-
-});
-
-['Quad', 'Cubic', 'Quart', 'Quint'].each(function(transition, i){
-	Fx.Transitions[transition] = new Fx.Transition(function(p){
-		return Math.pow(p, i + 2);
-	});
-});
-/*
----
-
-name: Fx.Morph
-
-description: Formerly Fx.Styles, effect to transition any number of CSS properties for an element using an object of rules, or CSS based selector rules.
-
-license: MIT-style license.
-
-requires: Fx.CSS
-
-provides: Fx.Morph
-
-...
-*/
-
-Fx.Morph = new Class({
-
-	Extends: Fx.CSS,
-
-	initialize: function(element, options){
-		this.element = this.subject = document.id(element);
-		this.parent(options);
-	},
-
-	set: function(now){
-		if (typeof now == 'string') now = this.search(now);
-		for (var p in now) this.render(this.element, p, now[p], this.options.unit);
-		return this;
-	},
-
-	compute: function(from, to, delta){
-		var now = {};
-		for (var p in from) now[p] = this.parent(from[p], to[p], delta);
-		return now;
-	},
-
-	start: function(properties){
-		if (!this.check(properties)) return this;
-		if (typeof properties == 'string') properties = this.search(properties);
-		var from = {}, to = {};
-		for (var p in properties){
-			var parsed = this.prepare(this.element, p, properties[p]);
-			from[p] = parsed.from;
-			to[p] = parsed.to;
-		}
-		return this.parent(from, to);
-	}
-
-});
-
-Element.Properties.morph = {
-
-	set: function(options){
-		this.get('morph').cancel().setOptions(options);
-		return this;
-	},
-
-	get: function(){
-		var morph = this.retrieve('morph');
-		if (!morph){
-			morph = new Fx.Morph(this, {link: 'cancel'});
-			this.store('morph', morph);
-		}
-		return morph;
-	}
-
-};
-
-Element.implement({
-
-	morph: function(props){
-		this.get('morph').start(props);
-		return this;
-	}
-
-});
-/*
----
-
-name: Hash
-
-description: Contains Hash Prototypes. Provides a means for overcoming the JavaScript practical impossibility of extending native Objects.
-
-license: MIT-style license.
-
-requires:
-  - Core/Object
-  - MooTools.More
-
-provides: [Hash]
-
-...
-*/
-
-(function(){
-
-if (this.Hash) return;
-
-var Hash = this.Hash = new Type('Hash', function(object){
-	if (typeOf(object) == 'hash') object = Object.clone(object.getClean());
-	for (var key in object) this[key] = object[key];
-	return this;
-});
-
-this.$H = function(object){
-	return new Hash(object);
-};
-
-Hash.implement({
-
-	forEach: function(fn, bind){
-		Object.forEach(this, fn, bind);
-	},
-
-	getClean: function(){
-		var clean = {};
-		for (var key in this){
-			if (this.hasOwnProperty(key)) clean[key] = this[key];
-		}
-		return clean;
-	},
-
-	getLength: function(){
-		var length = 0;
-		for (var key in this){
-			if (this.hasOwnProperty(key)) length++;
-		}
-		return length;
-	}
-
-});
-
-Hash.alias('each', 'forEach');
-
-Hash.implement({
-
-	has: Object.prototype.hasOwnProperty,
-
-	keyOf: function(value){
-		return Object.keyOf(this, value);
-	},
-
-	hasValue: function(value){
-		return Object.contains(this, value);
-	},
-
-	extend: function(properties){
-		Hash.each(properties || {}, function(value, key){
-			Hash.set(this, key, value);
-		}, this);
-		return this;
-	},
-
-	combine: function(properties){
-		Hash.each(properties || {}, function(value, key){
-			Hash.include(this, key, value);
-		}, this);
-		return this;
-	},
-
-	erase: function(key){
-		if (this.hasOwnProperty(key)) delete this[key];
-		return this;
-	},
-
-	get: function(key){
-		return (this.hasOwnProperty(key)) ? this[key] : null;
-	},
-
-	set: function(key, value){
-		if (!this[key] || this.hasOwnProperty(key)) this[key] = value;
-		return this;
-	},
-
-	empty: function(){
-		Hash.each(this, function(value, key){
-			delete this[key];
-		}, this);
-		return this;
-	},
-
-	include: function(key, value){
-		if (this[key] == undefined) this[key] = value;
-		return this;
-	},
-
-	map: function(fn, bind){
-		return new Hash(Object.map(this, fn, bind));
-	},
-
-	filter: function(fn, bind){
-		return new Hash(Object.filter(this, fn, bind));
-	},
-
-	every: function(fn, bind){
-		return Object.every(this, fn, bind);
-	},
-
-	some: function(fn, bind){
-		return Object.some(this, fn, bind);
-	},
-
-	getKeys: function(){
-		return Object.keys(this);
-	},
-
-	getValues: function(){
-		return Object.values(this);
-	},
-
-	toQueryString: function(base){
-		return Object.toQueryString(this, base);
-	}
-
-});
-
-Hash.alias({indexOf: 'keyOf', contains: 'hasValue'});
-
-
-})();
-
-/*
----
-
-name: JSON
-
-description: JSON encoder and decoder.
-
-license: MIT-style license.
-
-SeeAlso: <http://www.json.org/>
-
-requires: [Array, String, Number, Function]
-
-provides: JSON
-
-...
-*/
-
-if (typeof JSON == 'undefined') this.JSON = {};
-
-
-
-(function(){
-
-var special = {'\b': '\\b', '\t': '\\t', '\n': '\\n', '\f': '\\f', '\r': '\\r', '"' : '\\"', '\\': '\\\\'};
-
-var escape = function(chr){
-	return special[chr] || '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).slice(-4);
-};
-
-JSON.validate = function(string){
-	string = string.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@').
-					replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
-					replace(/(?:^|:|,)(?:\s*\[)+/g, '');
-
-	return (/^[\],:{}\s]*$/).test(string);
-};
-
-JSON.encode = JSON.stringify ? function(obj){
-	return JSON.stringify(obj);
-} : function(obj){
-	if (obj && obj.toJSON) obj = obj.toJSON();
-
-	switch (typeOf(obj)){
-		case 'string':
-			return '"' + obj.replace(/[\x00-\x1f\\"]/g, escape) + '"';
-		case 'array':
-			return '[' + obj.map(JSON.encode).clean() + ']';
-		case 'object': case 'hash':
-			var string = [];
-			Object.each(obj, function(value, key){
-				var json = JSON.encode(value);
-				if (json) string.push(JSON.encode(key) + ':' + json);
-			});
-			return '{' + string + '}';
-		case 'number': case 'boolean': return '' + obj;
-		case 'null': return 'null';
-	}
-
-	return null;
-};
-
-JSON.secure = true;
-
-
-JSON.decode = function(string, secure){
-	if (!string || typeOf(string) != 'string') return null;
-
-	if (secure == null) secure = JSON.secure;
-	if (secure){
-		if (JSON.parse) return JSON.parse(string);
-		if (!JSON.validate(string)) throw new Error('JSON could not decode the input; security is enabled and the value is not secure.');
-	}
-
-	return eval('(' + string + ')');
-};
-
-})();
-/*
----
-
-name: Cookie
-
-description: Class for creating, reading, and deleting browser Cookies.
-
-license: MIT-style license.
-
-credits:
-  - Based on the functions by Peter-Paul Koch (http://quirksmode.org).
-
-requires: [Options, Browser]
-
-provides: Cookie
-
-...
-*/
-
-var Cookie = new Class({
-
-	Implements: Options,
-
-	options: {
-		path: '/',
-		domain: false,
-		duration: false,
-		secure: false,
-		document: document,
-		encode: true,
-		httpOnly: false
-	},
-
-	initialize: function(key, options){
-		this.key = key;
-		this.setOptions(options);
-	},
-
-	write: function(value){
-		if (this.options.encode) value = encodeURIComponent(value);
-		if (this.options.domain) value += '; domain=' + this.options.domain;
-		if (this.options.path) value += '; path=' + this.options.path;
-		if (this.options.duration){
-			var date = new Date();
-			date.setTime(date.getTime() + this.options.duration * 24 * 60 * 60 * 1000);
-			value += '; expires=' + date.toGMTString();
-		}
-		if (this.options.secure) value += '; secure';
-		if (this.options.httpOnly) value += '; HttpOnly';
-		this.options.document.cookie = this.key + '=' + value;
-		return this;
-	},
-
-	read: function(){
-		var value = this.options.document.cookie.match('(?:^|;)\\s*' + this.key.escapeRegExp() + '=([^;]*)');
-		return (value) ? decodeURIComponent(value[1]) : null;
-	},
-
-	dispose: function(){
-		new Cookie(this.key, Object.merge({}, this.options, {duration: -1})).write('');
-		return this;
-	}
-
-});
-
-Cookie.write = function(key, value, options){
-	return new Cookie(key, options).write(value);
-};
-
-Cookie.read = function(key){
-	return new Cookie(key).read();
-};
-
-Cookie.dispose = function(key, options){
-	return new Cookie(key, options).dispose();
-};
 /*
 ---
 
@@ -6246,6 +5947,84 @@ Element.implement({
 /*
 ---
 
+name: JSON
+
+description: JSON encoder and decoder.
+
+license: MIT-style license.
+
+SeeAlso: <http://www.json.org/>
+
+requires: [Array, String, Number, Function]
+
+provides: JSON
+
+...
+*/
+
+if (typeof JSON == 'undefined') this.JSON = {};
+
+
+
+(function(){
+
+var special = {'\b': '\\b', '\t': '\\t', '\n': '\\n', '\f': '\\f', '\r': '\\r', '"' : '\\"', '\\': '\\\\'};
+
+var escape = function(chr){
+	return special[chr] || '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).slice(-4);
+};
+
+JSON.validate = function(string){
+	string = string.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@').
+					replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
+					replace(/(?:^|:|,)(?:\s*\[)+/g, '');
+
+	return (/^[\],:{}\s]*$/).test(string);
+};
+
+JSON.encode = JSON.stringify ? function(obj){
+	return JSON.stringify(obj);
+} : function(obj){
+	if (obj && obj.toJSON) obj = obj.toJSON();
+
+	switch (typeOf(obj)){
+		case 'string':
+			return '"' + obj.replace(/[\x00-\x1f\\"]/g, escape) + '"';
+		case 'array':
+			return '[' + obj.map(JSON.encode).clean() + ']';
+		case 'object': case 'hash':
+			var string = [];
+			Object.each(obj, function(value, key){
+				var json = JSON.encode(value);
+				if (json) string.push(JSON.encode(key) + ':' + json);
+			});
+			return '{' + string + '}';
+		case 'number': case 'boolean': return '' + obj;
+		case 'null': return 'null';
+	}
+
+	return null;
+};
+
+JSON.secure = true;
+
+
+JSON.decode = function(string, secure){
+	if (!string || typeOf(string) != 'string') return null;
+
+	if (secure == null) secure = JSON.secure;
+	if (secure){
+		if (JSON.parse) return JSON.parse(string);
+		if (!JSON.validate(string)) throw new Error('JSON could not decode the input; security is enabled and the value is not secure.');
+	}
+
+	return eval('(' + string + ')');
+};
+
+})();
+/*
+---
+
 name: Request.JSON
 
 description: Extends the basic Request Class with additional methods for sending and receiving JSON data.
@@ -6296,341 +6075,1244 @@ Request.JSON = new Class({
 /*
 ---
 
-script: Fx.Slide.js
+name: Hash
 
-name: Fx.Slide
+description: Contains Hash Prototypes. Provides a means for overcoming the JavaScript practical impossibility of extending native Objects.
 
-description: Effect to slide an element in and out of view.
-
-license: MIT-style license
-
-authors:
-  - Valerio Proietti
+license: MIT-style license.
 
 requires:
-  - Core/Fx
-  - Core/Element.Style
+  - Core/Object
   - MooTools.More
 
-provides: [Fx.Slide]
-
-...
-*/
-
-Fx.Slide = new Class({
-
-	Extends: Fx,
-
-	options: {
-		mode: 'vertical',
-		wrapper: false,
-		hideOverflow: true,
-		resetHeight: false
-	},
-
-	initialize: function(element, options){
-		element = this.element = this.subject = document.id(element);
-		this.parent(options);
-		options = this.options;
-
-		var wrapper = element.retrieve('wrapper'),
-			styles = element.getStyles('margin', 'position', 'overflow');
-
-		if (options.hideOverflow) styles = Object.append(styles, {overflow: 'hidden'});
-		if (options.wrapper) wrapper = document.id(options.wrapper).setStyles(styles);
-
-		if (!wrapper) wrapper = new Element('div', {
-			styles: styles
-		}).wraps(element);
-
-		element.store('wrapper', wrapper).setStyle('margin', 0);
-		if (element.getStyle('overflow') == 'visible') element.setStyle('overflow', 'hidden');
-
-		this.now = [];
-		this.open = true;
-		this.wrapper = wrapper;
-
-		this.addEvent('complete', function(){
-			this.open = (wrapper['offset' + this.layout.capitalize()] != 0);
-			if (this.open && this.options.resetHeight) wrapper.setStyle('height', '');
-		}, true);
-	},
-
-	vertical: function(){
-		this.margin = 'margin-top';
-		this.layout = 'height';
-		this.offset = this.element.offsetHeight;
-	},
-
-	horizontal: function(){
-		this.margin = 'margin-left';
-		this.layout = 'width';
-		this.offset = this.element.offsetWidth;
-	},
-
-	set: function(now){
-		this.element.setStyle(this.margin, now[0]);
-		this.wrapper.setStyle(this.layout, now[1]);
-		return this;
-	},
-
-	compute: function(from, to, delta){
-		return [0, 1].map(function(i){
-			return Fx.compute(from[i], to[i], delta);
-		});
-	},
-
-	start: function(how, mode){
-		if (!this.check(how, mode)) return this;
-		this[mode || this.options.mode]();
-
-		var margin = this.element.getStyle(this.margin).toInt(),
-			layout = this.wrapper.getStyle(this.layout).toInt(),
-			caseIn = [[margin, layout], [0, this.offset]],
-			caseOut = [[margin, layout], [-this.offset, 0]],
-			start;
-
-		switch (how){
-			case 'in': start = caseIn; break;
-			case 'out': start = caseOut; break;
-			case 'toggle': start = (layout == 0) ? caseIn : caseOut;
-		}
-		return this.parent(start[0], start[1]);
-	},
-
-	slideIn: function(mode){
-		return this.start('in', mode);
-	},
-
-	slideOut: function(mode){
-		return this.start('out', mode);
-	},
-
-	hide: function(mode){
-		this[mode || this.options.mode]();
-		this.open = false;
-		return this.set([-this.offset, 0]);
-	},
-
-	show: function(mode){
-		this[mode || this.options.mode]();
-		this.open = true;
-		return this.set([0, this.offset]);
-	},
-
-	toggle: function(mode){
-		return this.start('toggle', mode);
-	}
-
-});
-
-Element.Properties.slide = {
-
-	set: function(options){
-		this.get('slide').cancel().setOptions(options);
-		return this;
-	},
-
-	get: function(){
-		var slide = this.retrieve('slide');
-		if (!slide){
-			slide = new Fx.Slide(this, {link: 'cancel'});
-			this.store('slide', slide);
-		}
-		return slide;
-	}
-
-};
-
-Element.implement({
-
-	slide: function(how, mode){
-		how = how || 'toggle';
-		var slide = this.get('slide'), toggle;
-		switch (how){
-			case 'hide': slide.hide(mode); break;
-			case 'show': slide.show(mode); break;
-			case 'toggle':
-				var flag = this.retrieve('slide:flag', slide.open);
-				slide[flag ? 'slideOut' : 'slideIn'](mode);
-				this.store('slide:flag', !flag);
-				toggle = true;
-				break;
-			default: slide.start(how, mode);
-		}
-		if (!toggle) this.eliminate('slide:flag');
-		return this;
-	}
-
-});
-/*
----
-
-script: Fx.Scroll.js
-
-name: Fx.Scroll
-
-description: Effect to smoothly scroll any element, including the window.
-
-license: MIT-style license
-
-authors:
-  - Valerio Proietti
-
-requires:
-  - Core/Fx
-  - Core/Element.Event
-  - Core/Element.Dimensions
-  - MooTools.More
-
-provides: [Fx.Scroll]
+provides: [Hash]
 
 ...
 */
 
 (function(){
 
-Fx.Scroll = new Class({
+if (this.Hash) return;
 
-	Extends: Fx,
+var Hash = this.Hash = new Type('Hash', function(object){
+	if (typeOf(object) == 'hash') object = Object.clone(object.getClean());
+	for (var key in object) this[key] = object[key];
+	return this;
+});
+
+this.$H = function(object){
+	return new Hash(object);
+};
+
+Hash.implement({
+
+	forEach: function(fn, bind){
+		Object.forEach(this, fn, bind);
+	},
+
+	getClean: function(){
+		var clean = {};
+		for (var key in this){
+			if (this.hasOwnProperty(key)) clean[key] = this[key];
+		}
+		return clean;
+	},
+
+	getLength: function(){
+		var length = 0;
+		for (var key in this){
+			if (this.hasOwnProperty(key)) length++;
+		}
+		return length;
+	}
+
+});
+
+Hash.alias('each', 'forEach');
+
+Hash.implement({
+
+	has: Object.prototype.hasOwnProperty,
+
+	keyOf: function(value){
+		return Object.keyOf(this, value);
+	},
+
+	hasValue: function(value){
+		return Object.contains(this, value);
+	},
+
+	extend: function(properties){
+		Hash.each(properties || {}, function(value, key){
+			Hash.set(this, key, value);
+		}, this);
+		return this;
+	},
+
+	combine: function(properties){
+		Hash.each(properties || {}, function(value, key){
+			Hash.include(this, key, value);
+		}, this);
+		return this;
+	},
+
+	erase: function(key){
+		if (this.hasOwnProperty(key)) delete this[key];
+		return this;
+	},
+
+	get: function(key){
+		return (this.hasOwnProperty(key)) ? this[key] : null;
+	},
+
+	set: function(key, value){
+		if (!this[key] || this.hasOwnProperty(key)) this[key] = value;
+		return this;
+	},
+
+	empty: function(){
+		Hash.each(this, function(value, key){
+			delete this[key];
+		}, this);
+		return this;
+	},
+
+	include: function(key, value){
+		if (this[key] == undefined) this[key] = value;
+		return this;
+	},
+
+	map: function(fn, bind){
+		return new Hash(Object.map(this, fn, bind));
+	},
+
+	filter: function(fn, bind){
+		return new Hash(Object.filter(this, fn, bind));
+	},
+
+	every: function(fn, bind){
+		return Object.every(this, fn, bind);
+	},
+
+	some: function(fn, bind){
+		return Object.some(this, fn, bind);
+	},
+
+	getKeys: function(){
+		return Object.keys(this);
+	},
+
+	getValues: function(){
+		return Object.values(this);
+	},
+
+	toQueryString: function(base){
+		return Object.toQueryString(this, base);
+	}
+
+});
+
+Hash.alias({indexOf: 'keyOf', contains: 'hasValue'});
+
+
+})();
+
+/*
+---
+
+name: Cookie
+
+description: Class for creating, reading, and deleting browser Cookies.
+
+license: MIT-style license.
+
+credits:
+  - Based on the functions by Peter-Paul Koch (http://quirksmode.org).
+
+requires: [Options, Browser]
+
+provides: Cookie
+
+...
+*/
+
+var Cookie = new Class({
+
+	Implements: Options,
 
 	options: {
-		offset: {x: 0, y: 0},
-		wheelStops: true
+		path: '/',
+		domain: false,
+		duration: false,
+		secure: false,
+		document: document,
+		encode: true,
+		httpOnly: false
 	},
 
-	initialize: function(element, options){
-		this.element = this.subject = document.id(element);
-		this.parent(options);
+	initialize: function(key, options){
+		this.key = key;
+		this.setOptions(options);
+	},
 
-		if (typeOf(this.element) != 'element') this.element = document.id(this.element.getDocument().body);
-
-		if (this.options.wheelStops){
-			var stopper = this.element,
-				cancel = this.cancel.pass(false, this);
-			this.addEvent('start', function(){
-				stopper.addEvent('mousewheel', cancel);
-			}, true);
-			this.addEvent('complete', function(){
-				stopper.removeEvent('mousewheel', cancel);
-			}, true);
+	write: function(value){
+		if (this.options.encode) value = encodeURIComponent(value);
+		if (this.options.domain) value += '; domain=' + this.options.domain;
+		if (this.options.path) value += '; path=' + this.options.path;
+		if (this.options.duration){
+			var date = new Date();
+			date.setTime(date.getTime() + this.options.duration * 24 * 60 * 60 * 1000);
+			value += '; expires=' + date.toGMTString();
 		}
-	},
-
-	set: function(){
-		var now = Array.flatten(arguments);
-		this.element.scrollTo(now[0], now[1]);
+		if (this.options.secure) value += '; secure';
+		if (this.options.httpOnly) value += '; HttpOnly';
+		this.options.document.cookie = this.key + '=' + value;
 		return this;
 	},
 
-	compute: function(from, to, delta){
-		return [0, 1].map(function(i){
-			return Fx.compute(from[i], to[i], delta);
-		});
+	read: function(){
+		var value = this.options.document.cookie.match('(?:^|;)\\s*' + this.key.escapeRegExp() + '=([^;]*)');
+		return (value) ? decodeURIComponent(value[1]) : null;
 	},
 
-	start: function(x, y){
-		if (!this.check(x, y)) return this;
-		var scroll = this.element.getScroll();
-		return this.parent([scroll.x, scroll.y], [x, y]);
-	},
-
-	calculateScroll: function(x, y){
-		var element = this.element,
-			scrollSize = element.getScrollSize(),
-			scroll = element.getScroll(),
-			size = element.getSize(),
-			offset = this.options.offset,
-			values = {x: x, y: y};
-
-		for (var z in values){
-			if (!values[z] && values[z] !== 0) values[z] = scroll[z];
-			if (typeOf(values[z]) != 'number') values[z] = scrollSize[z] - size[z];
-			values[z] += offset[z];
-		}
-
-		return [values.x, values.y];
-	},
-
-	toTop: function(){
-		return this.start.apply(this, this.calculateScroll(false, 0));
-	},
-
-	toLeft: function(){
-		return this.start.apply(this, this.calculateScroll(0, false));
-	},
-
-	toRight: function(){
-		return this.start.apply(this, this.calculateScroll('right', false));
-	},
-
-	toBottom: function(){
-		return this.start.apply(this, this.calculateScroll(false, 'bottom'));
-	},
-
-	toElement: function(el, axes){
-		axes = axes ? Array.convert(axes) : ['x', 'y'];
-		var scroll = isBody(this.element) ? {x: 0, y: 0} : this.element.getScroll();
-		var position = Object.map(document.id(el).getPosition(this.element), function(value, axis){
-			return axes.contains(axis) ? value + scroll[axis] : false;
-		});
-		return this.start.apply(this, this.calculateScroll(position.x, position.y));
-	},
-
-	toElementEdge: function(el, axes, offset){
-		axes = axes ? Array.convert(axes) : ['x', 'y'];
-		el = document.id(el);
-		var to = {},
-			position = el.getPosition(this.element),
-			size = el.getSize(),
-			scroll = this.element.getScroll(),
-			containerSize = this.element.getSize(),
-			edge = {
-				x: position.x + size.x,
-				y: position.y + size.y
-			};
-
-		['x', 'y'].each(function(axis){
-			if (axes.contains(axis)){
-				if (edge[axis] > scroll[axis] + containerSize[axis]) to[axis] = edge[axis] - containerSize[axis];
-				if (position[axis] < scroll[axis]) to[axis] = position[axis];
-			}
-			if (to[axis] == null) to[axis] = scroll[axis];
-			if (offset && offset[axis]) to[axis] = to[axis] + offset[axis];
-		}, this);
-
-		if (to.x != scroll.x || to.y != scroll.y) this.start(to.x, to.y);
-		return this;
-	},
-
-	toElementCenter: function(el, axes, offset){
-		axes = axes ? Array.convert(axes) : ['x', 'y'];
-		el = document.id(el);
-		var to = {},
-			position = el.getPosition(this.element),
-			size = el.getSize(),
-			scroll = this.element.getScroll(),
-			containerSize = this.element.getSize();
-
-		['x', 'y'].each(function(axis){
-			if (axes.contains(axis)){
-				to[axis] = position[axis] - (containerSize[axis] - size[axis]) / 2;
-			}
-			if (to[axis] == null) to[axis] = scroll[axis];
-			if (offset && offset[axis]) to[axis] = to[axis] + offset[axis];
-		}, this);
-
-		if (to.x != scroll.x || to.y != scroll.y) this.start(to.x, to.y);
+	dispose: function(){
+		new Cookie(this.key, Object.merge({}, this.options, {duration: -1})).write('');
 		return this;
 	}
 
 });
 
+Cookie.write = function(key, value, options){
+	return new Cookie(key, options).write(value);
+};
+
+Cookie.read = function(key){
+	return new Cookie(key).read();
+};
+
+Cookie.dispose = function(key, options){
+	return new Cookie(key, options).dispose();
+};
+/*
+---
+
+script: Class.Occlude.js
+
+name: Class.Occlude
+
+description: Prevents a class from being applied to a DOM element twice.
+
+license: MIT-style license.
+
+authors:
+  - Aaron Newton
+
+requires:
+  - Core/Class
+  - Core/Element
+  - MooTools.More
+
+provides: [Class.Occlude]
+
+...
+*/
+
+Class.Occlude = new Class({
+
+	occlude: function(property, element){
+		element = document.id(element || this.element);
+		var instance = element.retrieve(property || this.property);
+		if (instance && !this.occluded)
+			return (this.occluded = instance);
+
+		this.occluded = false;
+		element.store(property || this.property, this);
+		return this.occluded;
+	}
+
+});
+/*
+---
+
+script: Drag.js
+
+name: Drag
+
+description: The base Drag Class. Can be used to drag and resize Elements using mouse events.
+
+license: MIT-style license
+
+authors:
+  - Valerio Proietti
+  - Tom Occhinno
+  - Jan Kassens
+
+requires:
+  - Core/Events
+  - Core/Options
+  - Core/Element.Event
+  - Core/Element.Style
+  - Core/Element.Dimensions
+  - MooTools.More
+
+provides: [Drag]
+...
+
+*/
+(function(){
+
+var Drag = this.Drag = new Class({
+
+	Implements: [Events, Options],
+
+	options: {/*
+		onBeforeStart: function(thisElement){},
+		onStart: function(thisElement, event){},
+		onSnap: function(thisElement){},
+		onDrag: function(thisElement, event){},
+		onCancel: function(thisElement){},
+		onComplete: function(thisElement, event){},*/
+		snap: 6,
+		unit: 'px',
+		grid: false,
+		style: true,
+		limit: false,
+		handle: false,
+		invert: false,
+		unDraggableTags: ['button', 'input', 'a', 'textarea', 'select', 'option'],
+		preventDefault: false,
+		stopPropagation: false,
+		compensateScroll: false,
+		modifiers: {x: 'left', y: 'top'}
+	},
+
+	initialize: function(){
+		var params = Array.link(arguments, {
+			'options': Type.isObject,
+			'element': function(obj){
+				return obj != null;
+			}
+		});
+
+		this.element = document.id(params.element);
+		this.document = this.element.getDocument();
+		this.setOptions(params.options || {});
+		var htype = typeOf(this.options.handle);
+		this.handles = ((htype == 'array' || htype == 'collection') ? $$(this.options.handle) : document.id(this.options.handle)) || this.element;
+		this.mouse = {'now': {}, 'pos': {}};
+		this.value = {'start': {}, 'now': {}};
+		this.offsetParent = (function(el){
+			var offsetParent = el.getOffsetParent();
+			var isBody = !offsetParent || (/^(?:body|html)$/i).test(offsetParent.tagName);
+			return isBody ? window : document.id(offsetParent);
+		})(this.element);
+		this.selection = 'selectstart' in document ? 'selectstart' : 'mousedown';
+
+		this.compensateScroll = {start: {}, diff: {}, last: {}};
+
+		if ('ondragstart' in document && !('FileReader' in window) && !Drag.ondragstartFixed){
+			document.ondragstart = Function.convert(false);
+			Drag.ondragstartFixed = true;
+		}
+
+		this.bound = {
+			start: this.start.bind(this),
+			check: this.check.bind(this),
+			drag: this.drag.bind(this),
+			stop: this.stop.bind(this),
+			cancel: this.cancel.bind(this),
+			eventStop: Function.convert(false),
+			scrollListener: this.scrollListener.bind(this)
+		};
+		this.attach();
+	},
+
+	attach: function(){
+		this.handles.addEvent('mousedown', this.bound.start);
+		this.handles.addEvent('touchstart', this.bound.start);
+		if (this.options.compensateScroll) this.offsetParent.addEvent('scroll', this.bound.scrollListener);
+		return this;
+	},
+
+	detach: function(){
+		this.handles.removeEvent('mousedown', this.bound.start);
+		this.handles.removeEvent('touchstart', this.bound.start);
+		if (this.options.compensateScroll) this.offsetParent.removeEvent('scroll', this.bound.scrollListener);
+		return this;
+	},
+
+	scrollListener: function(){
+
+		if (!this.mouse.start) return;
+		var newScrollValue = this.offsetParent.getScroll();
+
+		if (this.element.getStyle('position') == 'absolute'){
+			var scrollDiff = this.sumValues(newScrollValue, this.compensateScroll.last, -1);
+			this.mouse.now = this.sumValues(this.mouse.now, scrollDiff, 1);
+		} else {
+			this.compensateScroll.diff = this.sumValues(newScrollValue, this.compensateScroll.start, -1);
+		}
+		if (this.offsetParent != window) this.compensateScroll.diff = this.sumValues(this.compensateScroll.start, newScrollValue, -1);
+		this.compensateScroll.last = newScrollValue;
+		this.render(this.options);
+	},
+
+	sumValues: function(alpha, beta, op){
+		var sum = {}, options = this.options;
+		for (var z in options.modifiers){
+			if (!options.modifiers[z]) continue;
+			sum[z] = alpha[z] + beta[z] * op;
+		}
+		return sum;
+	},
+
+	start: function(event){
+		if (this.options.unDraggableTags.contains(event.target.get('tag'))) return;
+
+		var options = this.options;
+
+		if (event.rightClick) return;
+
+		if (options.preventDefault) event.preventDefault();
+		if (options.stopPropagation) event.stopPropagation();
+		this.compensateScroll.start = this.compensateScroll.last = this.offsetParent.getScroll();
+		this.compensateScroll.diff = {x: 0, y: 0};
+		this.mouse.start = event.page;
+		this.fireEvent('beforeStart', this.element);
+
+		var limit = options.limit;
+		this.limit = {x: [], y: []};
+
+		var z, coordinates, offsetParent = this.offsetParent == window ? null : this.offsetParent;
+		for (z in options.modifiers){
+			if (!options.modifiers[z]) continue;
+
+			var style = this.element.getStyle(options.modifiers[z]);
+
+			// Some browsers (IE and Opera) don't always return pixels.
+			if (style && !style.match(/px$/)){
+				if (!coordinates) coordinates = this.element.getCoordinates(offsetParent);
+				style = coordinates[options.modifiers[z]];
+			}
+
+			if (options.style) this.value.now[z] = (style || 0).toInt();
+			else this.value.now[z] = this.element[options.modifiers[z]];
+
+			if (options.invert) this.value.now[z] *= -1;
+
+			this.mouse.pos[z] = event.page[z] - this.value.now[z];
+
+			if (limit && limit[z]){
+				var i = 2;
+				while (i--){
+					var limitZI = limit[z][i];
+					if (limitZI || limitZI === 0) this.limit[z][i] = (typeof limitZI == 'function') ? limitZI() : limitZI;
+				}
+			}
+		}
+
+		if (typeOf(this.options.grid) == 'number') this.options.grid = {
+			x: this.options.grid,
+			y: this.options.grid
+		};
+
+		var events = {
+			mousemove: this.bound.check,
+			mouseup: this.bound.cancel,
+			touchmove: this.bound.check,
+			touchend: this.bound.cancel
+		};
+		events[this.selection] = this.bound.eventStop;
+		this.document.addEvents(events);
+	},
+
+	check: function(event){
+		if (this.options.preventDefault) event.preventDefault();
+		var distance = Math.round(Math.sqrt(Math.pow(event.page.x - this.mouse.start.x, 2) + Math.pow(event.page.y - this.mouse.start.y, 2)));
+		if (distance > this.options.snap){
+			this.cancel();
+			this.document.addEvents({
+				mousemove: this.bound.drag,
+				mouseup: this.bound.stop,
+				touchmove: this.bound.drag,
+				touchend: this.bound.stop
+			});
+			this.fireEvent('start', [this.element, event]).fireEvent('snap', this.element);
+		}
+	},
+
+	drag: function(event){
+		var options = this.options;
+		if (options.preventDefault) event.preventDefault();
+		this.mouse.now = this.sumValues(event.page, this.compensateScroll.diff, -1);
+
+		this.render(options);
+		this.fireEvent('drag', [this.element, event]);
+	},
+
+	render: function(options){
+		for (var z in options.modifiers){
+			if (!options.modifiers[z]) continue;
+			this.value.now[z] = this.mouse.now[z] - this.mouse.pos[z];
+
+			if (options.invert) this.value.now[z] *= -1;
+			if (options.limit && this.limit[z]){
+				if ((this.limit[z][1] || this.limit[z][1] === 0) && (this.value.now[z] > this.limit[z][1])){
+					this.value.now[z] = this.limit[z][1];
+				} else if ((this.limit[z][0] || this.limit[z][0] === 0) && (this.value.now[z] < this.limit[z][0])){
+					this.value.now[z] = this.limit[z][0];
+				}
+			}
+			if (options.grid[z]) this.value.now[z] -= ((this.value.now[z] - (this.limit[z][0]||0)) % options.grid[z]);
+			if (options.style) this.element.setStyle(options.modifiers[z], this.value.now[z] + options.unit);
+			else this.element[options.modifiers[z]] = this.value.now[z];
+		}
+	},
+
+	cancel: function(event){
+		this.document.removeEvents({
+			mousemove: this.bound.check,
+			mouseup: this.bound.cancel,
+			touchmove: this.bound.check,
+			touchend: this.bound.cancel
+		});
+		if (event){
+			this.document.removeEvent(this.selection, this.bound.eventStop);
+			this.fireEvent('cancel', this.element);
+		}
+	},
+
+	stop: function(event){
+		var events = {
+			mousemove: this.bound.drag,
+			mouseup: this.bound.stop,
+			touchmove: this.bound.drag,
+			touchend: this.bound.stop
+		};
+		events[this.selection] = this.bound.eventStop;
+		this.document.removeEvents(events);
+		this.mouse.start = null;
+		if (event) this.fireEvent('complete', [this.element, event]);
+	}
+
+});
+
+})();
 
 
-function isBody(element){
-	return (/^(?:body|html)$/i).test(element.tagName);
-}
+Element.implement({
+
+	makeResizable: function(options){
+		var drag = new Drag(this, Object.merge({
+			modifiers: {
+				x: 'width',
+				y: 'height'
+			}
+		}, options));
+
+		this.store('resizer', drag);
+		return drag.addEvent('drag', function(){
+			this.fireEvent('resize', drag);
+		}.bind(this));
+	}
+
+});
+/*
+---
+
+script: Drag.Move.js
+
+name: Drag.Move
+
+description: A Drag extension that provides support for the constraining of draggables to containers and droppables.
+
+license: MIT-style license
+
+authors:
+  - Valerio Proietti
+  - Tom Occhinno
+  - Jan Kassens
+  - Aaron Newton
+  - Scott Kyle
+
+requires:
+  - Core/Element.Dimensions
+  - Drag
+
+provides: [Drag.Move]
+
+...
+*/
+
+Drag.Move = new Class({
+
+	Extends: Drag,
+
+	options: {/*
+		onEnter: function(thisElement, overed){},
+		onLeave: function(thisElement, overed){},
+		onDrop: function(thisElement, overed, event){},*/
+		droppables: [],
+		container: false,
+		precalculate: false,
+		includeMargins: true,
+		checkDroppables: true
+	},
+
+	initialize: function(element, options){
+		this.parent(element, options);
+		element = this.element;
+
+		this.droppables = $$(this.options.droppables);
+		this.setContainer(this.options.container);
+
+		if (this.options.style){
+			if (this.options.modifiers.x == 'left' && this.options.modifiers.y == 'top'){
+				var parent = element.getOffsetParent(),
+					styles = element.getStyles('left', 'top');
+				if (parent && (styles.left == 'auto' || styles.top == 'auto')){
+					element.setPosition(element.getPosition(parent));
+				}
+			}
+
+			if (element.getStyle('position') == 'static') element.setStyle('position', 'absolute');
+		}
+
+		this.addEvent('start', this.checkDroppables, true);
+		this.overed = null;
+	},
+
+	setContainer: function(container){
+		this.container = document.id(container);
+		if (this.container && typeOf(this.container) != 'element'){
+			this.container = document.id(this.container.getDocument().body);
+		}
+	},
+
+	start: function(event){
+		if (this.container) this.options.limit = this.calculateLimit();
+
+		if (this.options.precalculate){
+			this.positions = this.droppables.map(function(el){
+				return el.getCoordinates();
+			});
+		}
+
+		this.parent(event);
+	},
+
+	calculateLimit: function(){
+		var element = this.element,
+			container = this.container,
+
+			offsetParent = document.id(element.getOffsetParent()) || document.body,
+			containerCoordinates = container.getCoordinates(offsetParent),
+			elementMargin = {},
+			elementBorder = {},
+			containerMargin = {},
+			containerBorder = {},
+			offsetParentPadding = {},
+			offsetScroll = offsetParent.getScroll();
+
+		['top', 'right', 'bottom', 'left'].each(function(pad){
+			elementMargin[pad] = element.getStyle('margin-' + pad).toInt();
+			elementBorder[pad] = element.getStyle('border-' + pad).toInt();
+			containerMargin[pad] = container.getStyle('margin-' + pad).toInt();
+			containerBorder[pad] = container.getStyle('border-' + pad).toInt();
+			offsetParentPadding[pad] = offsetParent.getStyle('padding-' + pad).toInt();
+		}, this);
+
+		var width = element.offsetWidth + elementMargin.left + elementMargin.right,
+			height = element.offsetHeight + elementMargin.top + elementMargin.bottom,
+			left = 0 + offsetScroll.x,
+			top = 0 + offsetScroll.y,
+			right = containerCoordinates.right - containerBorder.right - width + offsetScroll.x,
+			bottom = containerCoordinates.bottom - containerBorder.bottom - height + offsetScroll.y;
+
+		if (this.options.includeMargins){
+			left += elementMargin.left;
+			top += elementMargin.top;
+		} else {
+			right += elementMargin.right;
+			bottom += elementMargin.bottom;
+		}
+
+		if (element.getStyle('position') == 'relative'){
+			var coords = element.getCoordinates(offsetParent);
+			coords.left -= element.getStyle('left').toInt();
+			coords.top -= element.getStyle('top').toInt();
+
+			left -= coords.left;
+			top -= coords.top;
+			if (container.getStyle('position') != 'relative'){
+				left += containerBorder.left;
+				top += containerBorder.top;
+			}
+			right += elementMargin.left - coords.left;
+			bottom += elementMargin.top - coords.top;
+
+			if (container != offsetParent){
+				left += containerMargin.left + offsetParentPadding.left;
+				if (!offsetParentPadding.left && left < 0) left = 0;
+				top += offsetParent == document.body ? 0 : containerMargin.top + offsetParentPadding.top;
+				if (!offsetParentPadding.top && top < 0) top = 0;
+			}
+		} else {
+			left -= elementMargin.left;
+			top -= elementMargin.top;
+			if (container != offsetParent){
+				left += containerCoordinates.left + containerBorder.left;
+				top += containerCoordinates.top + containerBorder.top;
+			}
+		}
+
+		return {
+			x: [left, right],
+			y: [top, bottom]
+		};
+	},
+
+	getDroppableCoordinates: function(element){
+		var position = element.getCoordinates();
+		if (element.getStyle('position') == 'fixed'){
+			var scroll = window.getScroll();
+			position.left += scroll.x;
+			position.right += scroll.x;
+			position.top += scroll.y;
+			position.bottom += scroll.y;
+		}
+		return position;
+	},
+
+	checkDroppables: function(){
+		var overed = this.droppables.filter(function(el, i){
+			el = this.positions ? this.positions[i] : this.getDroppableCoordinates(el);
+			var now = this.mouse.now;
+			return (now.x > el.left && now.x < el.right && now.y < el.bottom && now.y > el.top);
+		}, this).getLast();
+
+		if (this.overed != overed){
+			if (this.overed) this.fireEvent('leave', [this.element, this.overed]);
+			if (overed) this.fireEvent('enter', [this.element, overed]);
+			this.overed = overed;
+		}
+	},
+
+	drag: function(event){
+		this.parent(event);
+		if (this.options.checkDroppables && this.droppables.length) this.checkDroppables();
+	},
+
+	stop: function(event){
+		this.checkDroppables();
+		this.fireEvent('drop', [this.element, this.overed, event]);
+		this.overed = null;
+		return this.parent(event);
+	}
+
+});
+
+Element.implement({
+
+	makeDraggable: function(options){
+		var drag = new Drag.Move(this, options);
+		this.store('dragger', drag);
+		return drag;
+	}
+
+});
+/*
+---
+
+script: Sortables.js
+
+name: Sortables
+
+description: Class for creating a drag and drop sorting interface for lists of items.
+
+license: MIT-style license
+
+authors:
+  - Tom Occhino
+
+requires:
+  - Core/Fx.Morph
+  - Drag.Move
+
+provides: [Sortables]
+
+...
+*/
+(function(){
+
+var Sortables = this.Sortables = new Class({
+
+	Implements: [Events, Options],
+
+	options: {/*
+		onSort: function(element, clone){},
+		onStart: function(element, clone){},
+		onComplete: function(element){},*/
+		opacity: 1,
+		clone: false,
+		revert: false,
+		handle: false,
+		dragOptions: {},
+		unDraggableTags: ['button', 'input', 'a', 'textarea', 'select', 'option']
+	},
+
+	initialize: function(lists, options){
+		this.setOptions(options);
+
+		this.elements = [];
+		this.lists = [];
+		this.idle = true;
+
+		this.addLists($$(document.id(lists) || lists));
+
+		if (!this.options.clone) this.options.revert = false;
+		if (this.options.revert) this.effect = new Fx.Morph(null, Object.merge({
+			duration: 250,
+			link: 'cancel'
+		}, this.options.revert));
+	},
+
+	attach: function(){
+		this.addLists(this.lists);
+		return this;
+	},
+
+	detach: function(){
+		this.lists = this.removeLists(this.lists);
+		return this;
+	},
+
+	addItems: function(){
+		Array.flatten(arguments).each(function(element){
+			this.elements.push(element);
+			var start = element.retrieve('sortables:start', function(event){
+				this.start.call(this, event, element);
+			}.bind(this));
+			(this.options.handle ? element.getElement(this.options.handle) || element : element).addEvent('mousedown', start);
+		}, this);
+		return this;
+	},
+
+	addLists: function(){
+		Array.flatten(arguments).each(function(list){
+			this.lists.include(list);
+			this.addItems(list.getChildren());
+		}, this);
+		return this;
+	},
+
+	removeItems: function(){
+		return $$(Array.flatten(arguments).map(function(element){
+			this.elements.erase(element);
+			var start = element.retrieve('sortables:start');
+			(this.options.handle ? element.getElement(this.options.handle) || element : element).removeEvent('mousedown', start);
+
+			return element;
+		}, this));
+	},
+
+	removeLists: function(){
+		return $$(Array.flatten(arguments).map(function(list){
+			this.lists.erase(list);
+			this.removeItems(list.getChildren());
+
+			return list;
+		}, this));
+	},
+
+	getDroppableCoordinates: function(element){
+		var offsetParent = element.getOffsetParent();
+		var position = element.getPosition(offsetParent);
+		var scroll = {
+			w: window.getScroll(),
+			offsetParent: offsetParent.getScroll()
+		};
+		position.x += scroll.offsetParent.x;
+		position.y += scroll.offsetParent.y;
+
+		if (offsetParent.getStyle('position') == 'fixed'){
+			position.x -= scroll.w.x;
+			position.y -= scroll.w.y;
+		}
+
+		return position;
+	},
+
+	getClone: function(event, element){
+		if (!this.options.clone) return new Element(element.tagName).inject(document.body);
+		if (typeOf(this.options.clone) == 'function') return this.options.clone.call(this, event, element, this.list);
+		var clone = element.clone(true).setStyles({
+			margin: 0,
+			position: 'absolute',
+			visibility: 'hidden',
+			width: element.getStyle('width')
+		}).addEvent('mousedown', function(event){
+			element.fireEvent('mousedown', event);
+		});
+		//prevent the duplicated radio inputs from unchecking the real one
+		if (clone.get('html').test('radio')){
+			clone.getElements('input[type=radio]').each(function(input, i){
+				input.set('name', 'clone_' + i);
+				if (input.get('checked')) element.getElements('input[type=radio]')[i].set('checked', true);
+			});
+		}
+
+		return clone.inject(this.list).setPosition(this.getDroppableCoordinates(this.element));
+	},
+
+	getDroppables: function(){
+		var droppables = this.list.getChildren().erase(this.clone).erase(this.element);
+		if (!this.options.constrain) droppables.append(this.lists).erase(this.list);
+		return droppables;
+	},
+
+	insert: function(dragging, element){
+		var where = 'inside';
+		if (this.lists.contains(element)){
+			this.list = element;
+			this.drag.droppables = this.getDroppables();
+		} else {
+			where = this.element.getAllPrevious().contains(element) ? 'before' : 'after';
+		}
+		this.element.inject(element, where);
+		this.fireEvent('sort', [this.element, this.clone]);
+	},
+
+	start: function(event, element){
+		if (
+			!this.idle ||
+			event.rightClick ||
+			(!this.options.handle && this.options.unDraggableTags.contains(event.target.get('tag')))
+		) return;
+
+		this.idle = false;
+		this.element = element;
+		this.opacity = element.getStyle('opacity');
+		this.list = element.getParent();
+		this.clone = this.getClone(event, element);
+
+		this.drag = new Drag.Move(this.clone, Object.merge({
+			
+			droppables: this.getDroppables()
+		}, this.options.dragOptions)).addEvents({
+			onSnap: function(){
+				event.stop();
+				this.clone.setStyle('visibility', 'visible');
+				this.element.setStyle('opacity', this.options.opacity || 0);
+				this.fireEvent('start', [this.element, this.clone]);
+			}.bind(this),
+			onEnter: this.insert.bind(this),
+			onCancel: this.end.bind(this),
+			onComplete: this.end.bind(this)
+		});
+
+		this.clone.inject(this.element, 'before');
+		this.drag.start(event);
+	},
+
+	end: function(){
+		this.drag.detach();
+		this.element.setStyle('opacity', this.opacity);
+		var self = this;
+		if (this.effect){
+			var dim = this.element.getStyles('width', 'height'),
+				clone = this.clone,
+				pos = clone.computePosition(this.getDroppableCoordinates(clone));
+
+			var destroy = function(){
+				this.removeEvent('cancel', destroy);
+				clone.destroy();
+				self.reset();
+			};
+
+			this.effect.element = clone;
+			this.effect.start({
+				top: pos.top,
+				left: pos.left,
+				width: dim.width,
+				height: dim.height,
+				opacity: 0.25
+			}).addEvent('cancel', destroy).chain(destroy);
+		} else {
+			this.clone.destroy();
+			self.reset();
+		}
+
+	},
+
+	reset: function(){
+		this.idle = true;
+		this.fireEvent('complete', this.element);
+	},
+
+	serialize: function(){
+		var params = Array.link(arguments, {
+			modifier: Type.isFunction,
+			index: function(obj){
+				return obj != null;
+			}
+		});
+		var serial = this.lists.map(function(list){
+			return list.getChildren().map(params.modifier || function(element){
+				return element.get('id');
+			}, this);
+		}, this);
+
+		var index = params.index;
+		if (this.lists.length == 1) index = 0;
+		return (index || index === 0) && index >= 0 && index < this.lists.length ? serial[index] : serial;
+	}
+
+});
+
+})();
+/*
+---
+
+script: Elements.From.js
+
+name: Elements.From
+
+description: Returns a collection of elements from a string of html.
+
+license: MIT-style license
+
+authors:
+  - Aaron Newton
+
+requires:
+  - Core/String
+  - Core/Element
+  - MooTools.More
+
+provides: [Elements.from, Elements.From]
+
+...
+*/
+
+Elements.from = function(text, excludeScripts){
+	if (excludeScripts || excludeScripts == null) text = text.stripScripts();
+
+	var container, match = text.match(/^\s*(?:<!--.*?-->\s*)*<(t[dhr]|tbody|tfoot|thead)/i);
+
+	if (match){
+		container = new Element('table');
+		var tag = match[1].toLowerCase();
+		if (['td', 'th', 'tr'].contains(tag)){
+			container = new Element('tbody').inject(container);
+			if (tag != 'tr') container = new Element('tr').inject(container);
+		}
+	}
+
+	return (container || new Element('div')).set('html', text).getChildren();
+};
+/*
+---
+
+name: Element.Delegation
+
+description: Extends the Element native object to include the delegate method for more efficient event management.
+
+license: MIT-style license.
+
+requires: [Element.Event]
+
+provides: [Element.Delegation]
+
+...
+*/
+
+(function(){
+
+var eventListenerSupport = !!window.addEventListener;
+
+Element.NativeEvents.focusin = Element.NativeEvents.focusout = 2;
+
+var bubbleUp = function(self, match, fn, event, target){
+	while (target && target != self){
+		if (match(target, event)) return fn.call(target, event, target);
+		target = document.id(target.parentNode);
+	}
+};
+
+var map = {
+	mouseenter: {
+		base: 'mouseover',
+		condition: Element.MouseenterCheck
+	},
+	mouseleave: {
+		base: 'mouseout',
+		condition: Element.MouseenterCheck
+	},
+	focus: {
+		base: 'focus' + (eventListenerSupport ? '' : 'in'),
+		capture: true
+	},
+	blur: {
+		base: eventListenerSupport ? 'blur' : 'focusout',
+		capture: true
+	}
+};
+
+/*<ltIE9>*/
+var _key = '$delegation:';
+var formObserver = function(type){
+
+	return {
+
+		base: 'focusin',
+
+		remove: function(self, uid){
+			var list = self.retrieve(_key + type + 'listeners', {})[uid];
+			if (list && list.forms) for (var i = list.forms.length; i--;){
+				// the form may have been destroyed, so it won't have the
+				// removeEvent method anymore. In that case the event was
+				// removed as well.
+				if (list.forms[i].removeEvent) list.forms[i].removeEvent(type, list.fns[i]);
+			}
+		},
+
+		listen: function(self, match, fn, event, target, uid){
+			var form = (target.get('tag') == 'form') ? target : event.target.getParent('form');
+			if (!form) return;
+
+			var listeners = self.retrieve(_key + type + 'listeners', {}),
+				listener = listeners[uid] || {forms: [], fns: []},
+				forms = listener.forms, fns = listener.fns;
+
+			if (forms.indexOf(form) != -1) return;
+			forms.push(form);
+
+			var _fn = function(event){
+				bubbleUp(self, match, fn, event, target);
+			};
+			form.addEvent(type, _fn);
+			fns.push(_fn);
+
+			listeners[uid] = listener;
+			self.store(_key + type + 'listeners', listeners);
+		}
+	};
+};
+
+var inputObserver = function(type){
+	return {
+		base: 'focusin',
+		listen: function(self, match, fn, event, target){
+			var events = {blur: function(){
+				this.removeEvents(events);
+			}};
+			events[type] = function(event){
+				bubbleUp(self, match, fn, event, target);
+			};
+			event.target.addEvents(events);
+		}
+	};
+};
+
+if (!eventListenerSupport) Object.append(map, {
+	submit: formObserver('submit'),
+	reset: formObserver('reset'),
+	change: inputObserver('change'),
+	select: inputObserver('select')
+});
+/*</ltIE9>*/
+
+var proto = Element.prototype,
+	addEvent = proto.addEvent,
+	removeEvent = proto.removeEvent;
+
+var relay = function(old, method){
+	return function(type, fn, useCapture){
+		if (type.indexOf(':relay') == -1) return old.call(this, type, fn, useCapture);
+		var parsed = Slick.parse(type).expressions[0][0];
+		if (parsed.pseudos[0].key != 'relay') return old.call(this, type, fn, useCapture);
+		var newType = parsed.tag;
+		parsed.pseudos.slice(1).each(function(pseudo){
+			newType += ':' + pseudo.key + (pseudo.value ? '(' + pseudo.value + ')' : '');
+		});
+		old.call(this, type, fn);
+		return method.call(this, newType, parsed.pseudos[0].value, fn);
+	};
+};
+
+var delegation = {
+
+	addEvent: function(type, match, fn){
+		var storage = this.retrieve('$delegates', {}), stored = storage[type];
+		if (stored) for (var _uid in stored){
+			if (stored[_uid].fn == fn && stored[_uid].match == match) return this;
+		}
+
+		var _type = type, _match = match, _fn = fn, _map = map[type] || {};
+		type = _map.base || _type;
+
+		match = function(target){
+			return Slick.match(target, _match);
+		};
+
+		var elementEvent = Element.Events[_type];
+		if (_map.condition || elementEvent && elementEvent.condition){
+			var __match = match, condition = _map.condition || elementEvent.condition;
+			match = function(target, event){
+				return __match(target, event) && condition.call(target, event, type);
+			};
+		}
+
+		var self = this, uid = String.uniqueID();
+		var delegator = _map.listen ? function(event, target){
+			if (!target && event && event.target) target = event.target;
+			if (target) _map.listen(self, match, fn, event, target, uid);
+		} : function(event, target){
+			if (!target && event && event.target) target = event.target;
+			if (target) bubbleUp(self, match, fn, event, target);
+		};
+
+		if (!stored) stored = {};
+		stored[uid] = {
+			match: _match,
+			fn: _fn,
+			delegator: delegator
+		};
+		storage[_type] = stored;
+		return addEvent.call(this, type, delegator, _map.capture);
+	},
+
+	removeEvent: function(type, match, fn, _uid){
+		var storage = this.retrieve('$delegates', {}), stored = storage[type];
+		if (!stored) return this;
+
+		if (_uid){
+			var _type = type, delegator = stored[_uid].delegator, _map = map[type] || {};
+			type = _map.base || _type;
+			if (_map.remove) _map.remove(this, _uid);
+			delete stored[_uid];
+			storage[_type] = stored;
+			return removeEvent.call(this, type, delegator, _map.capture);
+		}
+
+		var __uid, s;
+		if (fn) for (__uid in stored){
+			s = stored[__uid];
+			if (s.match == match && s.fn == fn) return delegation.removeEvent.call(this, type, match, fn, __uid);
+		} else for (__uid in stored){
+			s = stored[__uid];
+			if (s.match == match) delegation.removeEvent.call(this, type, match, s.fn, __uid);
+		}
+		return this;
+	}
+
+};
+
+[Element, Window, Document].invoke('implement', {
+	addEvent: relay(addEvent, delegation.addEvent),
+	removeEvent: relay(removeEvent, delegation.removeEvent)
+});
 
 })();
 /*
@@ -6865,6 +7547,43 @@ Locale.Set = new Class({
 
 
 })();
+/*
+---
+
+script: Class.Binds.js
+
+name: Class.Binds
+
+description: Automagically binds specified methods in a class to the instance of the class.
+
+license: MIT-style license
+
+authors:
+  - Aaron Newton
+
+requires:
+  - Core/Class
+  - MooTools.More
+
+provides: [Class.Binds]
+
+...
+*/
+
+Class.Mutators.Binds = function(binds){
+	if (!this.prototype.initialize) this.implement('initialize', function(){});
+	return Array.convert(binds).concat(this.prototype.Binds || []);
+};
+
+Class.Mutators.initialize = function(initialize){
+	return function(){
+		Array.convert(this.Binds).each(function(name){
+			var original = this[name];
+			if (original) this[name] = original.bind(this);
+		}, this);
+		return initialize.apply(this, arguments);
+	};
+};
 /*
 ---
 
@@ -7495,810 +8214,6 @@ Locale.addEvent('change', function(language){
 }).fireEvent('change', Locale.getCurrent());
 
 })();
-/*
----
-
-script: String.QueryString.js
-
-name: String.QueryString
-
-description: Methods for dealing with URI query strings.
-
-license: MIT-style license
-
-authors:
-  - Sebastian Markbåge
-  - Aaron Newton
-  - Lennart Pilon
-  - Valerio Proietti
-
-requires:
-  - Core/Array
-  - Core/String
-  - MooTools.More
-
-provides: [String.QueryString]
-
-...
-*/
-
-(function(){
-
-/**
- * decodeURIComponent doesn't do the correct thing with query parameter keys or
- * values. Specifically, it leaves '+' as '+' when it should be converting them
- * to spaces as that's the specification. When browsers submit HTML forms via
- * GET, the values are encoded using 'application/x-www-form-urlencoded'
- * which converts spaces to '+'.
- *
- * See: http://unixpapa.com/js/querystring.html for a description of the
- * problem.
- */
-var decodeComponent = function(str){
-	return decodeURIComponent(str.replace(/\+/g, ' '));
-};
-
-String.implement({
-
-	parseQueryString: function(decodeKeys, decodeValues){
-		if (decodeKeys == null) decodeKeys = true;
-		if (decodeValues == null) decodeValues = true;
-
-		var vars = this.split(/[&;]/),
-			object = {};
-		if (!vars.length) return object;
-
-		vars.each(function(val){
-			var index = val.indexOf('=') + 1,
-				value = index ? val.substr(index) : '',
-				keys = index ? val.substr(0, index - 1).match(/([^\]\[]+|(\B)(?=\]))/g) : [val],
-				obj = object;
-			if (!keys) return;
-			if (decodeValues) value = decodeComponent(value);
-			keys.each(function(key, i){
-				if (decodeKeys) key = decodeComponent(key);
-				var current = obj[key];
-
-				if (i < keys.length - 1) obj = obj[key] = current || {};
-				else if (typeOf(current) == 'array') current.push(value);
-				else obj[key] = current != null ? [current, value] : value;
-			});
-		});
-
-		return object;
-	},
-
-	cleanQueryString: function(method){
-		return this.split('&').filter(function(val){
-			var index = val.indexOf('='),
-				key = index < 0 ? '' : val.substr(0, index),
-				value = val.substr(index + 1);
-
-			return method ? method.call(null, key, value) : (value || value === 0);
-		}).join('&');
-	}
-
-});
-
-})();
-/*
----
-
-script: URI.js
-
-name: URI
-
-description: Provides methods useful in managing the window location and uris.
-
-license: MIT-style license
-
-authors:
-  - Sebastian Markbåge
-  - Aaron Newton
-
-requires:
-  - Core/Object
-  - Core/Class
-  - Core/Class.Extras
-  - Core/Element
-  - String.QueryString
-
-provides: [URI]
-
-...
-*/
-
-(function(){
-
-var toString = function(){
-	return this.get('value');
-};
-
-var URI = this.URI = new Class({
-
-	Implements: Options,
-
-	options: {
-		/*base: false*/
-	},
-
-	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@\/]*):?([^:@\/]*))?@)?(\[[A-Fa-f0-9:]+\]|[^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
-	parts: ['scheme', 'user', 'password', 'host', 'port', 'directory', 'file', 'query', 'fragment'],
-	schemes: {http: 80, https: 443, ftp: 21, rtsp: 554, mms: 1755, file: 0},
-
-	initialize: function(uri, options){
-		this.setOptions(options);
-		var base = this.options.base || URI.base;
-		if (!uri) uri = base;
-
-		if (uri && uri.parsed) this.parsed = Object.clone(uri.parsed);
-		else this.set('value', uri.href || uri.toString(), base ? new URI(base) : false);
-	},
-
-	parse: function(value, base){
-		var bits = value.match(this.regex);
-		if (!bits) return false;
-		bits.shift();
-		return this.merge(bits.associate(this.parts), base);
-	},
-
-	merge: function(bits, base){
-		if ((!bits || !bits.scheme) && (!base || !base.scheme)) return false;
-		if (base){
-			this.parts.every(function(part){
-				if (bits[part]) return false;
-				bits[part] = base[part] || '';
-				return true;
-			});
-		}
-		bits.port = bits.port || this.schemes[bits.scheme.toLowerCase()];
-		bits.directory = bits.directory ? this.parseDirectory(bits.directory, base ? base.directory : '') : '/';
-		return bits;
-	},
-
-	parseDirectory: function(directory, baseDirectory){
-		directory = (directory.substr(0, 1) == '/' ? '' : (baseDirectory || '/')) + directory;
-		if (!directory.test(URI.regs.directoryDot)) return directory;
-		var result = [];
-		directory.replace(URI.regs.endSlash, '').split('/').each(function(dir){
-			if (dir == '..' && result.length > 0) result.pop();
-			else if (dir != '.') result.push(dir);
-		});
-		return result.join('/') + '/';
-	},
-
-	combine: function(bits){
-		return bits.value || bits.scheme + '://' +
-			(bits.user ? bits.user + (bits.password ? ':' + bits.password : '') + '@' : '') +
-			(bits.host || '') + (bits.port && bits.port != this.schemes[bits.scheme] ? ':' + bits.port : '') +
-			(bits.directory || '/') + (bits.file || '') +
-			(bits.query ? '?' + bits.query : '') +
-			(bits.fragment ? '#' + bits.fragment : '');
-	},
-
-	set: function(part, value, base){
-		if (part == 'value'){
-			var scheme = value.match(URI.regs.scheme);
-			if (scheme) scheme = scheme[1];
-			if (scheme && this.schemes[scheme.toLowerCase()] == null) this.parsed = { scheme: scheme, value: value };
-			else this.parsed = this.parse(value, (base || this).parsed) || (scheme ? { scheme: scheme, value: value } : { value: value });
-		} else if (part == 'data'){
-			this.setData(value);
-		} else {
-			this.parsed[part] = value;
-		}
-		return this;
-	},
-
-	get: function(part, base){
-		switch (part){
-			case 'value': return this.combine(this.parsed, base ? base.parsed : false);
-			case 'data' : return this.getData();
-		}
-		return this.parsed[part] || '';
-	},
-
-	go: function(){
-		document.location.href = this.toString();
-	},
-
-	toURI: function(){
-		return this;
-	},
-
-	getData: function(key, part){
-		var qs = this.get(part || 'query');
-		if (!(qs || qs === 0)) return key ? null : {};
-		var obj = qs.parseQueryString();
-		return key ? obj[key] : obj;
-	},
-
-	setData: function(values, merge, part){
-		if (typeof values == 'string'){
-			var data = this.getData();
-			data[arguments[0]] = arguments[1];
-			values = data;
-		} else if (merge){
-			values = Object.merge(this.getData(null, part), values);
-		}
-		return this.set(part || 'query', Object.toQueryString(values));
-	},
-
-	clearData: function(part){
-		return this.set(part || 'query', '');
-	},
-
-	toString: toString,
-	valueOf: toString
-
-});
-
-URI.regs = {
-	endSlash: /\/$/,
-	scheme: /^(\w+):/,
-	directoryDot: /\.\/|\.$/
-};
-
-URI.base = new URI(Array.convert(document.getElements('base[href]', true)).getLast(), {base: document.location});
-
-String.implement({
-
-	toURI: function(options){
-		return new URI(this, options);
-	}
-
-});
-
-})();
-/*
----
-
-script: Elements.From.js
-
-name: Elements.From
-
-description: Returns a collection of elements from a string of html.
-
-license: MIT-style license
-
-authors:
-  - Aaron Newton
-
-requires:
-  - Core/String
-  - Core/Element
-  - MooTools.More
-
-provides: [Elements.from, Elements.From]
-
-...
-*/
-
-Elements.from = function(text, excludeScripts){
-	if (excludeScripts || excludeScripts == null) text = text.stripScripts();
-
-	var container, match = text.match(/^\s*(?:<!--.*?-->\s*)*<(t[dhr]|tbody|tfoot|thead)/i);
-
-	if (match){
-		container = new Element('table');
-		var tag = match[1].toLowerCase();
-		if (['td', 'th', 'tr'].contains(tag)){
-			container = new Element('tbody').inject(container);
-			if (tag != 'tr') container = new Element('tr').inject(container);
-		}
-	}
-
-	return (container || new Element('div')).set('html', text).getChildren();
-};
-/*
----
-
-script: Tips.js
-
-name: Tips
-
-description: Class for creating nice tips that follow the mouse cursor when hovering an element.
-
-license: MIT-style license
-
-authors:
-  - Valerio Proietti
-  - Christoph Pojer
-  - Luis Merino
-
-requires:
-  - Core/Options
-  - Core/Events
-  - Core/Element.Event
-  - Core/Element.Style
-  - Core/Element.Dimensions
-  - MooTools.More
-
-provides: [Tips]
-
-...
-*/
-
-(function(){
-
-var read = function(option, element){
-	return (option) ? (typeOf(option) == 'function' ? option(element) : element.get(option)) : '';
-};
-
-var Tips = this.Tips = new Class({
-
-	Implements: [Events, Options],
-
-	options: {/*
-		id: null,
-		onAttach: function(element){},
-		onDetach: function(element){},
-		onBound: function(coords){},*/
-		onShow: function(){
-			this.tip.setStyle('display', 'block');
-		},
-		onHide: function(){
-			this.tip.setStyle('display', 'none');
-		},
-		title: 'title',
-		text: function(element){
-			return element.get('rel') || element.get('href');
-		},
-		showDelay: 100,
-		hideDelay: 100,
-		className: 'tip-wrap',
-		offset: {x: 16, y: 16},
-		windowPadding: {x:0, y:0},
-		fixed: false,
-		waiAria: true,
-		hideEmpty: false
-	},
-
-	initialize: function(){
-		var params = Array.link(arguments, {
-			options: Type.isObject,
-			elements: function(obj){
-				return obj != null;
-			}
-		});
-		this.setOptions(params.options);
-		if (params.elements) this.attach(params.elements);
-		this.container = new Element('div', {'class': 'tip'});
-
-		if (this.options.id){
-			this.container.set('id', this.options.id);
-			if (this.options.waiAria) this.attachWaiAria();
-		}
-	},
-
-	toElement: function(){
-		if (this.tip) return this.tip;
-
-		this.tip = new Element('div', {
-			'class': this.options.className,
-			styles: {
-				position: 'absolute',
-				top: 0,
-				left: 0,
-				display: 'none'
-			}
-		}).adopt(
-			new Element('div', {'class': 'tip-top'}),
-			this.container,
-			new Element('div', {'class': 'tip-bottom'})
-		);
-
-		return this.tip;
-	},
-
-	attachWaiAria: function(){
-		var id = this.options.id;
-		this.container.set('role', 'tooltip');
-
-		if (!this.waiAria){
-			this.waiAria = {
-				show: function(element){
-					if (id) element.set('aria-describedby', id);
-					this.container.set('aria-hidden', 'false');
-				},
-				hide: function(element){
-					if (id) element.erase('aria-describedby');
-					this.container.set('aria-hidden', 'true');
-				}
-			};
-		}
-		this.addEvents(this.waiAria);
-	},
-
-	detachWaiAria: function(){
-		if (this.waiAria){
-			this.container.erase('role');
-			this.container.erase('aria-hidden');
-			this.removeEvents(this.waiAria);
-		}
-	},
-
-	attach: function(elements){
-		$$(elements).each(function(element){
-			var title = read(this.options.title, element),
-				text = read(this.options.text, element);
-
-			element.set('title', '').store('tip:native', title).retrieve('tip:title', title);
-			element.retrieve('tip:text', text);
-			this.fireEvent('attach', [element]);
-
-			var events = ['enter', 'leave'];
-			if (!this.options.fixed) events.push('move');
-
-			events.each(function(value){
-				var event = element.retrieve('tip:' + value);
-				if (!event) event = function(event){
-					this['element' + value.capitalize()].apply(this, [event, element]);
-				}.bind(this);
-
-				element.store('tip:' + value, event).addEvent('mouse' + value, event);
-			}, this);
-		}, this);
-
-		return this;
-	},
-
-	detach: function(elements){
-		$$(elements).each(function(element){
-			['enter', 'leave', 'move'].each(function(value){
-				element.removeEvent('mouse' + value, element.retrieve('tip:' + value)).eliminate('tip:' + value);
-			});
-
-			this.fireEvent('detach', [element]);
-
-			if (this.options.title == 'title'){ // This is necessary to check if we can revert the title
-				var original = element.retrieve('tip:native');
-				if (original) element.set('title', original);
-			}
-		}, this);
-
-		return this;
-	},
-
-	elementEnter: function(event, element){
-		clearTimeout(this.timer);
-		this.timer = (function(){
-			this.container.empty();
-			var showTip = !this.options.hideEmpty;
-			['title', 'text'].each(function(value){
-				var content = element.retrieve('tip:' + value);
-				var div = this['_' + value + 'Element'] = new Element('div', {
-					'class': 'tip-' + value
-				}).inject(this.container);
-				if (content){
-					this.fill(div, content);
-					showTip = true;
-				}
-			}, this);
-			if (showTip){
-				this.show(element);
-			} else {
-				this.hide(element);
-			}
-			this.position((this.options.fixed) ? {page: element.getPosition()} : event);
-		}).delay(this.options.showDelay, this);
-	},
-
-	elementLeave: function(event, element){
-		clearTimeout(this.timer);
-		this.timer = this.hide.delay(this.options.hideDelay, this, element);
-		this.fireForParent(event, element);
-	},
-
-	setTitle: function(title){
-		if (this._titleElement){
-			this._titleElement.empty();
-			this.fill(this._titleElement, title);
-		}
-		return this;
-	},
-
-	setText: function(text){
-		if (this._textElement){
-			this._textElement.empty();
-			this.fill(this._textElement, text);
-		}
-		return this;
-	},
-
-	fireForParent: function(event, element){
-		element = element.getParent();
-		if (!element || element == document.body) return;
-		if (element.retrieve('tip:enter')) element.fireEvent('mouseenter', event);
-		else this.fireForParent(event, element);
-	},
-
-	elementMove: function(event, element){
-		this.position(event);
-	},
-
-	position: function(event){
-		if (!this.tip) document.id(this);
-
-		var size = window.getSize(), scroll = window.getScroll(),
-			tip = {x: this.tip.offsetWidth, y: this.tip.offsetHeight},
-			props = {x: 'left', y: 'top'},
-			bounds = {y: false, x2: false, y2: false, x: false},
-			obj = {};
-
-		for (var z in props){
-			obj[props[z]] = event.page[z] + this.options.offset[z];
-			if (obj[props[z]] < 0) bounds[z] = true;
-			if ((obj[props[z]] + tip[z] - scroll[z]) > size[z] - this.options.windowPadding[z]){
-				obj[props[z]] = event.page[z] - this.options.offset[z] - tip[z];
-				bounds[z+'2'] = true;
-			}
-		}
-
-		this.fireEvent('bound', bounds);
-		this.tip.setStyles(obj);
-	},
-
-	fill: function(element, contents){
-		if (typeof contents == 'string') element.set('html', contents);
-		else element.adopt(contents);
-	},
-
-	show: function(element){
-		if (!this.tip) document.id(this);
-		if (!this.tip.getParent()) this.tip.inject(document.body);
-		this.fireEvent('show', [this.tip, element]);
-	},
-
-	hide: function(element){
-		if (!this.tip) document.id(this);
-		this.fireEvent('hide', [this.tip, element]);
-	}
-
-});
-
-})();
-/*
----
-
-name: Element.Delegation
-
-description: Extends the Element native object to include the delegate method for more efficient event management.
-
-license: MIT-style license.
-
-requires: [Element.Event]
-
-provides: [Element.Delegation]
-
-...
-*/
-
-(function(){
-
-var eventListenerSupport = !!window.addEventListener;
-
-Element.NativeEvents.focusin = Element.NativeEvents.focusout = 2;
-
-var bubbleUp = function(self, match, fn, event, target){
-	while (target && target != self){
-		if (match(target, event)) return fn.call(target, event, target);
-		target = document.id(target.parentNode);
-	}
-};
-
-var map = {
-	mouseenter: {
-		base: 'mouseover',
-		condition: Element.MouseenterCheck
-	},
-	mouseleave: {
-		base: 'mouseout',
-		condition: Element.MouseenterCheck
-	},
-	focus: {
-		base: 'focus' + (eventListenerSupport ? '' : 'in'),
-		capture: true
-	},
-	blur: {
-		base: eventListenerSupport ? 'blur' : 'focusout',
-		capture: true
-	}
-};
-
-/*<ltIE9>*/
-var _key = '$delegation:';
-var formObserver = function(type){
-
-	return {
-
-		base: 'focusin',
-
-		remove: function(self, uid){
-			var list = self.retrieve(_key + type + 'listeners', {})[uid];
-			if (list && list.forms) for (var i = list.forms.length; i--;){
-				// the form may have been destroyed, so it won't have the
-				// removeEvent method anymore. In that case the event was
-				// removed as well.
-				if (list.forms[i].removeEvent) list.forms[i].removeEvent(type, list.fns[i]);
-			}
-		},
-
-		listen: function(self, match, fn, event, target, uid){
-			var form = (target.get('tag') == 'form') ? target : event.target.getParent('form');
-			if (!form) return;
-
-			var listeners = self.retrieve(_key + type + 'listeners', {}),
-				listener = listeners[uid] || {forms: [], fns: []},
-				forms = listener.forms, fns = listener.fns;
-
-			if (forms.indexOf(form) != -1) return;
-			forms.push(form);
-
-			var _fn = function(event){
-				bubbleUp(self, match, fn, event, target);
-			};
-			form.addEvent(type, _fn);
-			fns.push(_fn);
-
-			listeners[uid] = listener;
-			self.store(_key + type + 'listeners', listeners);
-		}
-	};
-};
-
-var inputObserver = function(type){
-	return {
-		base: 'focusin',
-		listen: function(self, match, fn, event, target){
-			var events = {blur: function(){
-				this.removeEvents(events);
-			}};
-			events[type] = function(event){
-				bubbleUp(self, match, fn, event, target);
-			};
-			event.target.addEvents(events);
-		}
-	};
-};
-
-if (!eventListenerSupport) Object.append(map, {
-	submit: formObserver('submit'),
-	reset: formObserver('reset'),
-	change: inputObserver('change'),
-	select: inputObserver('select')
-});
-/*</ltIE9>*/
-
-var proto = Element.prototype,
-	addEvent = proto.addEvent,
-	removeEvent = proto.removeEvent;
-
-var relay = function(old, method){
-	return function(type, fn, useCapture){
-		if (type.indexOf(':relay') == -1) return old.call(this, type, fn, useCapture);
-		var parsed = Slick.parse(type).expressions[0][0];
-		if (parsed.pseudos[0].key != 'relay') return old.call(this, type, fn, useCapture);
-		var newType = parsed.tag;
-		parsed.pseudos.slice(1).each(function(pseudo){
-			newType += ':' + pseudo.key + (pseudo.value ? '(' + pseudo.value + ')' : '');
-		});
-		old.call(this, type, fn);
-		return method.call(this, newType, parsed.pseudos[0].value, fn);
-	};
-};
-
-var delegation = {
-
-	addEvent: function(type, match, fn){
-		var storage = this.retrieve('$delegates', {}), stored = storage[type];
-		if (stored) for (var _uid in stored){
-			if (stored[_uid].fn == fn && stored[_uid].match == match) return this;
-		}
-
-		var _type = type, _match = match, _fn = fn, _map = map[type] || {};
-		type = _map.base || _type;
-
-		match = function(target){
-			return Slick.match(target, _match);
-		};
-
-		var elementEvent = Element.Events[_type];
-		if (_map.condition || elementEvent && elementEvent.condition){
-			var __match = match, condition = _map.condition || elementEvent.condition;
-			match = function(target, event){
-				return __match(target, event) && condition.call(target, event, type);
-			};
-		}
-
-		var self = this, uid = String.uniqueID();
-		var delegator = _map.listen ? function(event, target){
-			if (!target && event && event.target) target = event.target;
-			if (target) _map.listen(self, match, fn, event, target, uid);
-		} : function(event, target){
-			if (!target && event && event.target) target = event.target;
-			if (target) bubbleUp(self, match, fn, event, target);
-		};
-
-		if (!stored) stored = {};
-		stored[uid] = {
-			match: _match,
-			fn: _fn,
-			delegator: delegator
-		};
-		storage[_type] = stored;
-		return addEvent.call(this, type, delegator, _map.capture);
-	},
-
-	removeEvent: function(type, match, fn, _uid){
-		var storage = this.retrieve('$delegates', {}), stored = storage[type];
-		if (!stored) return this;
-
-		if (_uid){
-			var _type = type, delegator = stored[_uid].delegator, _map = map[type] || {};
-			type = _map.base || _type;
-			if (_map.remove) _map.remove(this, _uid);
-			delete stored[_uid];
-			storage[_type] = stored;
-			return removeEvent.call(this, type, delegator, _map.capture);
-		}
-
-		var __uid, s;
-		if (fn) for (__uid in stored){
-			s = stored[__uid];
-			if (s.match == match && s.fn == fn) return delegation.removeEvent.call(this, type, match, fn, __uid);
-		} else for (__uid in stored){
-			s = stored[__uid];
-			if (s.match == match) delegation.removeEvent.call(this, type, match, s.fn, __uid);
-		}
-		return this;
-	}
-
-};
-
-[Element, Window, Document].invoke('implement', {
-	addEvent: relay(addEvent, delegation.addEvent),
-	removeEvent: relay(removeEvent, delegation.removeEvent)
-});
-
-})();
-/*
----
-
-script: Class.Binds.js
-
-name: Class.Binds
-
-description: Automagically binds specified methods in a class to the instance of the class.
-
-license: MIT-style license
-
-authors:
-  - Aaron Newton
-
-requires:
-  - Core/Class
-  - MooTools.More
-
-provides: [Class.Binds]
-
-...
-*/
-
-Class.Mutators.Binds = function(binds){
-	if (!this.prototype.initialize) this.implement('initialize', function(){});
-	return Array.convert(binds).concat(this.prototype.Binds || []);
-};
-
-Class.Mutators.initialize = function(initialize){
-	return function(){
-		Array.convert(this.Binds).each(function(name){
-			var original = this[name];
-			if (original) this[name] = original.bind(this);
-		}, this);
-		return initialize.apply(this, arguments);
-	};
-};
 /*
 ---
 
@@ -9475,113 +9390,1015 @@ Form.Validator.Inline = new Class({
 /*
 ---
 
-name: Swiff
+script: Fx.Scroll.js
 
-description: Wrapper for embedding SWF movies. Supports External Interface Communication.
+name: Fx.Scroll
 
-license: MIT-style license.
+description: Effect to smoothly scroll any element, including the window.
 
-credits:
-  - Flash detection & Internet Explorer + Flash Player 9 fix inspired by SWFObject.
+license: MIT-style license
 
-requires: [Core/Options, Core/Object, Core/Element]
+authors:
+  - Valerio Proietti
 
-provides: Swiff
+requires:
+  - Core/Fx
+  - Core/Element.Event
+  - Core/Element.Dimensions
+  - MooTools.More
+
+provides: [Fx.Scroll]
 
 ...
 */
 
 (function(){
 
-var Swiff = this.Swiff = new Class({
+Fx.Scroll = new Class({
 
-	Implements: Options,
+	Extends: Fx,
 
 	options: {
-		id: null,
-		height: 1,
-		width: 1,
-		container: null,
-		properties: {},
-		params: {
-			quality: 'high',
-			allowScriptAccess: 'always',
-			wMode: 'window',
-			swLiveConnect: true
-		},
-		callBacks: {},
-		vars: {}
+		offset: {x: 0, y: 0},
+		wheelStops: true
 	},
 
-	toElement: function(){
-		return this.object;
+	initialize: function(element, options){
+		this.element = this.subject = document.id(element);
+		this.parent(options);
+
+		if (typeOf(this.element) != 'element') this.element = document.id(this.element.getDocument().body);
+
+		if (this.options.wheelStops){
+			var stopper = this.element,
+				cancel = this.cancel.pass(false, this);
+			this.addEvent('start', function(){
+				stopper.addEvent('mousewheel', cancel);
+			}, true);
+			this.addEvent('complete', function(){
+				stopper.removeEvent('mousewheel', cancel);
+			}, true);
+		}
 	},
 
-	initialize: function(path, options){
-		this.instance = 'Swiff_' + String.uniqueID();
-
-		this.setOptions(options);
-		options = this.options;
-		var id = this.id = options.id || this.instance;
-		var container = document.id(options.container);
-
-		Swiff.CallBacks[this.instance] = {};
-
-		var params = options.params, vars = options.vars, callBacks = options.callBacks;
-		var properties = Object.append({height: options.height, width: options.width}, options.properties);
-
-		var self = this;
-
-		for (var callBack in callBacks){
-			Swiff.CallBacks[this.instance][callBack] = (function(option){
-				return function(){
-					return option.apply(self.object, arguments);
-				};
-			})(callBacks[callBack]);
-			vars[callBack] = 'Swiff.CallBacks.' + this.instance + '.' + callBack;
-		}
-
-		params.flashVars = Object.toQueryString(vars);
-		if ('ActiveXObject' in window){
-			properties.classid = 'clsid:D27CDB6E-AE6D-11cf-96B8-444553540000';
-			params.movie = path;
-		} else {
-			properties.type = 'application/x-shockwave-flash';
-		}
-		properties.data = path;
-
-		var build = '<object id="' + id + '"';
-		for (var property in properties) build += ' ' + property + '="' + properties[property] + '"';
-		build += '>';
-		for (var param in params){
-			if (params[param]) build += '<param name="' + param + '" value="' + params[param] + '" />';
-		}
-		build += '</object>';
-		this.object = ((container) ? container.empty() : new Element('div')).set('html', build).firstChild;
-	},
-
-	replaces: function(element){
-		element = document.id(element, true);
-		element.parentNode.replaceChild(this.toElement(), element);
+	set: function(){
+		var now = Array.flatten(arguments);
+		this.element.scrollTo(now[0], now[1]);
 		return this;
 	},
 
-	inject: function(element){
-		document.id(element, true).appendChild(this.toElement());
+	compute: function(from, to, delta){
+		return [0, 1].map(function(i){
+			return Fx.compute(from[i], to[i], delta);
+		});
+	},
+
+	start: function(x, y){
+		if (!this.check(x, y)) return this;
+		var scroll = this.element.getScroll();
+		return this.parent([scroll.x, scroll.y], [x, y]);
+	},
+
+	calculateScroll: function(x, y){
+		var element = this.element,
+			scrollSize = element.getScrollSize(),
+			scroll = element.getScroll(),
+			size = element.getSize(),
+			offset = this.options.offset,
+			values = {x: x, y: y};
+
+		for (var z in values){
+			if (!values[z] && values[z] !== 0) values[z] = scroll[z];
+			if (typeOf(values[z]) != 'number') values[z] = scrollSize[z] - size[z];
+			values[z] += offset[z];
+		}
+
+		return [values.x, values.y];
+	},
+
+	toTop: function(){
+		return this.start.apply(this, this.calculateScroll(false, 0));
+	},
+
+	toLeft: function(){
+		return this.start.apply(this, this.calculateScroll(0, false));
+	},
+
+	toRight: function(){
+		return this.start.apply(this, this.calculateScroll('right', false));
+	},
+
+	toBottom: function(){
+		return this.start.apply(this, this.calculateScroll(false, 'bottom'));
+	},
+
+	toElement: function(el, axes){
+		axes = axes ? Array.convert(axes) : ['x', 'y'];
+		var scroll = isBody(this.element) ? {x: 0, y: 0} : this.element.getScroll();
+		var position = Object.map(document.id(el).getPosition(this.element), function(value, axis){
+			return axes.contains(axis) ? value + scroll[axis] : false;
+		});
+		return this.start.apply(this, this.calculateScroll(position.x, position.y));
+	},
+
+	toElementEdge: function(el, axes, offset){
+		axes = axes ? Array.convert(axes) : ['x', 'y'];
+		el = document.id(el);
+		var to = {},
+			position = el.getPosition(this.element),
+			size = el.getSize(),
+			scroll = this.element.getScroll(),
+			containerSize = this.element.getSize(),
+			edge = {
+				x: position.x + size.x,
+				y: position.y + size.y
+			};
+
+		['x', 'y'].each(function(axis){
+			if (axes.contains(axis)){
+				if (edge[axis] > scroll[axis] + containerSize[axis]) to[axis] = edge[axis] - containerSize[axis];
+				if (position[axis] < scroll[axis]) to[axis] = position[axis];
+			}
+			if (to[axis] == null) to[axis] = scroll[axis];
+			if (offset && offset[axis]) to[axis] = to[axis] + offset[axis];
+		}, this);
+
+		if (to.x != scroll.x || to.y != scroll.y) this.start(to.x, to.y);
 		return this;
 	},
 
-	remote: function(){
-		return Swiff.remote.apply(Swiff, [this.toElement()].append(arguments));
+	toElementCenter: function(el, axes, offset){
+		axes = axes ? Array.convert(axes) : ['x', 'y'];
+		el = document.id(el);
+		var to = {},
+			position = el.getPosition(this.element),
+			size = el.getSize(),
+			scroll = this.element.getScroll(),
+			containerSize = this.element.getSize();
+
+		['x', 'y'].each(function(axis){
+			if (axes.contains(axis)){
+				to[axis] = position[axis] - (containerSize[axis] - size[axis]) / 2;
+			}
+			if (to[axis] == null) to[axis] = scroll[axis];
+			if (offset && offset[axis]) to[axis] = to[axis] + offset[axis];
+		}, this);
+
+		if (to.x != scroll.x || to.y != scroll.y) this.start(to.x, to.y);
+		return this;
 	}
 
 });
 
-Swiff.CallBacks = {};
 
-Swiff.remote = function(obj, fn){
-	var rs = obj.CallFunction('<invoke name="' + fn + '" returntype="javascript">' + __flash__argumentsToXML(arguments, 2) + '</invoke>');
-	return eval(rs);
+
+function isBody(element){
+	return (/^(?:body|html)$/i).test(element.tagName);
+}
+
+})();
+/*
+---
+
+script: Fx.Slide.js
+
+name: Fx.Slide
+
+description: Effect to slide an element in and out of view.
+
+license: MIT-style license
+
+authors:
+  - Valerio Proietti
+
+requires:
+  - Core/Fx
+  - Core/Element.Style
+  - MooTools.More
+
+provides: [Fx.Slide]
+
+...
+*/
+
+Fx.Slide = new Class({
+
+	Extends: Fx,
+
+	options: {
+		mode: 'vertical',
+		wrapper: false,
+		hideOverflow: true,
+		resetHeight: false
+	},
+
+	initialize: function(element, options){
+		element = this.element = this.subject = document.id(element);
+		this.parent(options);
+		options = this.options;
+
+		var wrapper = element.retrieve('wrapper'),
+			styles = element.getStyles('margin', 'position', 'overflow');
+
+		if (options.hideOverflow) styles = Object.append(styles, {overflow: 'hidden'});
+		if (options.wrapper) wrapper = document.id(options.wrapper).setStyles(styles);
+
+		if (!wrapper) wrapper = new Element('div', {
+			styles: styles
+		}).wraps(element);
+
+		element.store('wrapper', wrapper).setStyle('margin', 0);
+		if (element.getStyle('overflow') == 'visible') element.setStyle('overflow', 'hidden');
+
+		this.now = [];
+		this.open = true;
+		this.wrapper = wrapper;
+
+		this.addEvent('complete', function(){
+			this.open = (wrapper['offset' + this.layout.capitalize()] != 0);
+			if (this.open && this.options.resetHeight) wrapper.setStyle('height', '');
+		}, true);
+	},
+
+	vertical: function(){
+		this.margin = 'margin-top';
+		this.layout = 'height';
+		this.offset = this.element.offsetHeight;
+	},
+
+	horizontal: function(){
+		this.margin = 'margin-left';
+		this.layout = 'width';
+		this.offset = this.element.offsetWidth;
+	},
+
+	set: function(now){
+		this.element.setStyle(this.margin, now[0]);
+		this.wrapper.setStyle(this.layout, now[1]);
+		return this;
+	},
+
+	compute: function(from, to, delta){
+		return [0, 1].map(function(i){
+			return Fx.compute(from[i], to[i], delta);
+		});
+	},
+
+	start: function(how, mode){
+		if (!this.check(how, mode)) return this;
+		this[mode || this.options.mode]();
+
+		var margin = this.element.getStyle(this.margin).toInt(),
+			layout = this.wrapper.getStyle(this.layout).toInt(),
+			caseIn = [[margin, layout], [0, this.offset]],
+			caseOut = [[margin, layout], [-this.offset, 0]],
+			start;
+
+		switch (how){
+			case 'in': start = caseIn; break;
+			case 'out': start = caseOut; break;
+			case 'toggle': start = (layout == 0) ? caseIn : caseOut;
+		}
+		return this.parent(start[0], start[1]);
+	},
+
+	slideIn: function(mode){
+		return this.start('in', mode);
+	},
+
+	slideOut: function(mode){
+		return this.start('out', mode);
+	},
+
+	hide: function(mode){
+		this[mode || this.options.mode]();
+		this.open = false;
+		return this.set([-this.offset, 0]);
+	},
+
+	show: function(mode){
+		this[mode || this.options.mode]();
+		this.open = true;
+		return this.set([0, this.offset]);
+	},
+
+	toggle: function(mode){
+		return this.start('toggle', mode);
+	}
+
+});
+
+Element.Properties.slide = {
+
+	set: function(options){
+		this.get('slide').cancel().setOptions(options);
+		return this;
+	},
+
+	get: function(){
+		var slide = this.retrieve('slide');
+		if (!slide){
+			slide = new Fx.Slide(this, {link: 'cancel'});
+			this.store('slide', slide);
+		}
+		return slide;
+	}
+
+};
+
+Element.implement({
+
+	slide: function(how, mode){
+		how = how || 'toggle';
+		var slide = this.get('slide'), toggle;
+		switch (how){
+			case 'hide': slide.hide(mode); break;
+			case 'show': slide.show(mode); break;
+			case 'toggle':
+				var flag = this.retrieve('slide:flag', slide.open);
+				slide[flag ? 'slideOut' : 'slideIn'](mode);
+				this.store('slide:flag', !flag);
+				toggle = true;
+				break;
+			default: slide.start(how, mode);
+		}
+		if (!toggle) this.eliminate('slide:flag');
+		return this;
+	}
+
+});
+/*
+---
+
+script: Tips.js
+
+name: Tips
+
+description: Class for creating nice tips that follow the mouse cursor when hovering an element.
+
+license: MIT-style license
+
+authors:
+  - Valerio Proietti
+  - Christoph Pojer
+  - Luis Merino
+
+requires:
+  - Core/Options
+  - Core/Events
+  - Core/Element.Event
+  - Core/Element.Style
+  - Core/Element.Dimensions
+  - MooTools.More
+
+provides: [Tips]
+
+...
+*/
+
+(function(){
+
+var read = function(option, element){
+	return (option) ? (typeOf(option) == 'function' ? option(element) : element.get(option)) : '';
+};
+
+var Tips = this.Tips = new Class({
+
+	Implements: [Events, Options],
+
+	options: {/*
+		id: null,
+		onAttach: function(element){},
+		onDetach: function(element){},
+		onBound: function(coords){},*/
+		onShow: function(){
+			this.tip.setStyle('display', 'block');
+		},
+		onHide: function(){
+			this.tip.setStyle('display', 'none');
+		},
+		title: 'title',
+		text: function(element){
+			return element.get('rel') || element.get('href');
+		},
+		showDelay: 100,
+		hideDelay: 100,
+		className: 'tip-wrap',
+		offset: {x: 16, y: 16},
+		windowPadding: {x:0, y:0},
+		fixed: false,
+		waiAria: true,
+		hideEmpty: false
+	},
+
+	initialize: function(){
+		var params = Array.link(arguments, {
+			options: Type.isObject,
+			elements: function(obj){
+				return obj != null;
+			}
+		});
+		this.setOptions(params.options);
+		if (params.elements) this.attach(params.elements);
+		this.container = new Element('div', {'class': 'tip'});
+
+		if (this.options.id){
+			this.container.set('id', this.options.id);
+			if (this.options.waiAria) this.attachWaiAria();
+		}
+	},
+
+	toElement: function(){
+		if (this.tip) return this.tip;
+
+		this.tip = new Element('div', {
+			'class': this.options.className,
+			styles: {
+				position: 'absolute',
+				top: 0,
+				left: 0,
+				display: 'none'
+			}
+		}).adopt(
+			new Element('div', {'class': 'tip-top'}),
+			this.container,
+			new Element('div', {'class': 'tip-bottom'})
+		);
+
+		return this.tip;
+	},
+
+	attachWaiAria: function(){
+		var id = this.options.id;
+		this.container.set('role', 'tooltip');
+
+		if (!this.waiAria){
+			this.waiAria = {
+				show: function(element){
+					if (id) element.set('aria-describedby', id);
+					this.container.set('aria-hidden', 'false');
+				},
+				hide: function(element){
+					if (id) element.erase('aria-describedby');
+					this.container.set('aria-hidden', 'true');
+				}
+			};
+		}
+		this.addEvents(this.waiAria);
+	},
+
+	detachWaiAria: function(){
+		if (this.waiAria){
+			this.container.erase('role');
+			this.container.erase('aria-hidden');
+			this.removeEvents(this.waiAria);
+		}
+	},
+
+	attach: function(elements){
+		$$(elements).each(function(element){
+			var title = read(this.options.title, element),
+				text = read(this.options.text, element);
+
+			element.set('title', '').store('tip:native', title).retrieve('tip:title', title);
+			element.retrieve('tip:text', text);
+			this.fireEvent('attach', [element]);
+
+			var events = ['enter', 'leave'];
+			if (!this.options.fixed) events.push('move');
+
+			events.each(function(value){
+				var event = element.retrieve('tip:' + value);
+				if (!event) event = function(event){
+					this['element' + value.capitalize()].apply(this, [event, element]);
+				}.bind(this);
+
+				element.store('tip:' + value, event).addEvent('mouse' + value, event);
+			}, this);
+		}, this);
+
+		return this;
+	},
+
+	detach: function(elements){
+		$$(elements).each(function(element){
+			['enter', 'leave', 'move'].each(function(value){
+				element.removeEvent('mouse' + value, element.retrieve('tip:' + value)).eliminate('tip:' + value);
+			});
+
+			this.fireEvent('detach', [element]);
+
+			if (this.options.title == 'title'){ // This is necessary to check if we can revert the title
+				var original = element.retrieve('tip:native');
+				if (original) element.set('title', original);
+			}
+		}, this);
+
+		return this;
+	},
+
+	elementEnter: function(event, element){
+		clearTimeout(this.timer);
+		this.timer = (function(){
+			this.container.empty();
+			var showTip = !this.options.hideEmpty;
+			['title', 'text'].each(function(value){
+				var content = element.retrieve('tip:' + value);
+				var div = this['_' + value + 'Element'] = new Element('div', {
+					'class': 'tip-' + value
+				}).inject(this.container);
+				if (content){
+					this.fill(div, content);
+					showTip = true;
+				}
+			}, this);
+			if (showTip){
+				this.show(element);
+			} else {
+				this.hide(element);
+			}
+			this.position((this.options.fixed) ? {page: element.getPosition()} : event);
+		}).delay(this.options.showDelay, this);
+	},
+
+	elementLeave: function(event, element){
+		clearTimeout(this.timer);
+		this.timer = this.hide.delay(this.options.hideDelay, this, element);
+		this.fireForParent(event, element);
+	},
+
+	setTitle: function(title){
+		if (this._titleElement){
+			this._titleElement.empty();
+			this.fill(this._titleElement, title);
+		}
+		return this;
+	},
+
+	setText: function(text){
+		if (this._textElement){
+			this._textElement.empty();
+			this.fill(this._textElement, text);
+		}
+		return this;
+	},
+
+	fireForParent: function(event, element){
+		element = element.getParent();
+		if (!element || element == document.body) return;
+		if (element.retrieve('tip:enter')) element.fireEvent('mouseenter', event);
+		else this.fireForParent(event, element);
+	},
+
+	elementMove: function(event, element){
+		this.position(event);
+	},
+
+	position: function(event){
+		if (!this.tip) document.id(this);
+
+		var size = window.getSize(), scroll = window.getScroll(),
+			tip = {x: this.tip.offsetWidth, y: this.tip.offsetHeight},
+			props = {x: 'left', y: 'top'},
+			bounds = {y: false, x2: false, y2: false, x: false},
+			obj = {};
+
+		for (var z in props){
+			obj[props[z]] = event.page[z] + this.options.offset[z];
+			if (obj[props[z]] < 0) bounds[z] = true;
+			if ((obj[props[z]] + tip[z] - scroll[z]) > size[z] - this.options.windowPadding[z]){
+				obj[props[z]] = event.page[z] - this.options.offset[z] - tip[z];
+				bounds[z+'2'] = true;
+			}
+		}
+
+		this.fireEvent('bound', bounds);
+		this.tip.setStyles(obj);
+	},
+
+	fill: function(element, contents){
+		if (typeof contents == 'string') element.set('html', contents);
+		else element.adopt(contents);
+	},
+
+	show: function(element){
+		if (!this.tip) document.id(this);
+		if (!this.tip.getParent()) this.tip.inject(document.body);
+		this.fireEvent('show', [this.tip, element]);
+	},
+
+	hide: function(element){
+		if (!this.tip) document.id(this);
+		this.fireEvent('hide', [this.tip, element]);
+	}
+
+});
+
+})();
+/*
+---
+
+script: String.QueryString.js
+
+name: String.QueryString
+
+description: Methods for dealing with URI query strings.
+
+license: MIT-style license
+
+authors:
+  - Sebastian Markbåge
+  - Aaron Newton
+  - Lennart Pilon
+  - Valerio Proietti
+
+requires:
+  - Core/Array
+  - Core/String
+  - MooTools.More
+
+provides: [String.QueryString]
+
+...
+*/
+
+(function(){
+
+/**
+ * decodeURIComponent doesn't do the correct thing with query parameter keys or
+ * values. Specifically, it leaves '+' as '+' when it should be converting them
+ * to spaces as that's the specification. When browsers submit HTML forms via
+ * GET, the values are encoded using 'application/x-www-form-urlencoded'
+ * which converts spaces to '+'.
+ *
+ * See: http://unixpapa.com/js/querystring.html for a description of the
+ * problem.
+ */
+var decodeComponent = function(str){
+	return decodeURIComponent(str.replace(/\+/g, ' '));
+};
+
+String.implement({
+
+	parseQueryString: function(decodeKeys, decodeValues){
+		if (decodeKeys == null) decodeKeys = true;
+		if (decodeValues == null) decodeValues = true;
+
+		var vars = this.split(/[&;]/),
+			object = {};
+		if (!vars.length) return object;
+
+		vars.each(function(val){
+			var index = val.indexOf('=') + 1,
+				value = index ? val.substr(index) : '',
+				keys = index ? val.substr(0, index - 1).match(/([^\]\[]+|(\B)(?=\]))/g) : [val],
+				obj = object;
+			if (!keys) return;
+			if (decodeValues) value = decodeComponent(value);
+			keys.each(function(key, i){
+				if (decodeKeys) key = decodeComponent(key);
+				var current = obj[key];
+
+				if (i < keys.length - 1) obj = obj[key] = current || {};
+				else if (typeOf(current) == 'array') current.push(value);
+				else obj[key] = current != null ? [current, value] : value;
+			});
+		});
+
+		return object;
+	},
+
+	cleanQueryString: function(method){
+		return this.split('&').filter(function(val){
+			var index = val.indexOf('='),
+				key = index < 0 ? '' : val.substr(0, index),
+				value = val.substr(index + 1);
+
+			return method ? method.call(null, key, value) : (value || value === 0);
+		}).join('&');
+	}
+
+});
+
+})();
+/*
+---
+
+script: URI.js
+
+name: URI
+
+description: Provides methods useful in managing the window location and uris.
+
+license: MIT-style license
+
+authors:
+  - Sebastian Markbåge
+  - Aaron Newton
+
+requires:
+  - Core/Object
+  - Core/Class
+  - Core/Class.Extras
+  - Core/Element
+  - String.QueryString
+
+provides: [URI]
+
+...
+*/
+
+(function(){
+
+var toString = function(){
+	return this.get('value');
+};
+
+var URI = this.URI = new Class({
+
+	Implements: Options,
+
+	options: {
+		/*base: false*/
+	},
+
+	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@\/]*):?([^:@\/]*))?@)?(\[[A-Fa-f0-9:]+\]|[^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
+	parts: ['scheme', 'user', 'password', 'host', 'port', 'directory', 'file', 'query', 'fragment'],
+	schemes: {http: 80, https: 443, ftp: 21, rtsp: 554, mms: 1755, file: 0},
+
+	initialize: function(uri, options){
+		this.setOptions(options);
+		var base = this.options.base || URI.base;
+		if (!uri) uri = base;
+
+		if (uri && uri.parsed) this.parsed = Object.clone(uri.parsed);
+		else this.set('value', uri.href || uri.toString(), base ? new URI(base) : false);
+	},
+
+	parse: function(value, base){
+		var bits = value.match(this.regex);
+		if (!bits) return false;
+		bits.shift();
+		return this.merge(bits.associate(this.parts), base);
+	},
+
+	merge: function(bits, base){
+		if ((!bits || !bits.scheme) && (!base || !base.scheme)) return false;
+		if (base){
+			this.parts.every(function(part){
+				if (bits[part]) return false;
+				bits[part] = base[part] || '';
+				return true;
+			});
+		}
+		bits.port = bits.port || this.schemes[bits.scheme.toLowerCase()];
+		bits.directory = bits.directory ? this.parseDirectory(bits.directory, base ? base.directory : '') : '/';
+		return bits;
+	},
+
+	parseDirectory: function(directory, baseDirectory){
+		directory = (directory.substr(0, 1) == '/' ? '' : (baseDirectory || '/')) + directory;
+		if (!directory.test(URI.regs.directoryDot)) return directory;
+		var result = [];
+		directory.replace(URI.regs.endSlash, '').split('/').each(function(dir){
+			if (dir == '..' && result.length > 0) result.pop();
+			else if (dir != '.') result.push(dir);
+		});
+		return result.join('/') + '/';
+	},
+
+	combine: function(bits){
+		return bits.value || bits.scheme + '://' +
+			(bits.user ? bits.user + (bits.password ? ':' + bits.password : '') + '@' : '') +
+			(bits.host || '') + (bits.port && bits.port != this.schemes[bits.scheme] ? ':' + bits.port : '') +
+			(bits.directory || '/') + (bits.file || '') +
+			(bits.query ? '?' + bits.query : '') +
+			(bits.fragment ? '#' + bits.fragment : '');
+	},
+
+	set: function(part, value, base){
+		if (part == 'value'){
+			var scheme = value.match(URI.regs.scheme);
+			if (scheme) scheme = scheme[1];
+			if (scheme && this.schemes[scheme.toLowerCase()] == null) this.parsed = { scheme: scheme, value: value };
+			else this.parsed = this.parse(value, (base || this).parsed) || (scheme ? { scheme: scheme, value: value } : { value: value });
+		} else if (part == 'data'){
+			this.setData(value);
+		} else {
+			this.parsed[part] = value;
+		}
+		return this;
+	},
+
+	get: function(part, base){
+		switch (part){
+			case 'value': return this.combine(this.parsed, base ? base.parsed : false);
+			case 'data' : return this.getData();
+		}
+		return this.parsed[part] || '';
+	},
+
+	go: function(){
+		document.location.href = this.toString();
+	},
+
+	toURI: function(){
+		return this;
+	},
+
+	getData: function(key, part){
+		var qs = this.get(part || 'query');
+		if (!(qs || qs === 0)) return key ? null : {};
+		var obj = qs.parseQueryString();
+		return key ? obj[key] : obj;
+	},
+
+	setData: function(values, merge, part){
+		if (typeof values == 'string'){
+			var data = this.getData();
+			data[arguments[0]] = arguments[1];
+			values = data;
+		} else if (merge){
+			values = Object.merge(this.getData(null, part), values);
+		}
+		return this.set(part || 'query', Object.toQueryString(values));
+	},
+
+	clearData: function(part){
+		return this.set(part || 'query', '');
+	},
+
+	toString: toString,
+	valueOf: toString
+
+});
+
+URI.regs = {
+	endSlash: /\/$/,
+	scheme: /^(\w+):/,
+	directoryDot: /\.\/|\.$/
+};
+
+URI.base = new URI(Array.convert(document.getElements('base[href]', true)).getLast(), {base: document.location});
+
+String.implement({
+
+	toURI: function(options){
+		return new URI(this, options);
+	}
+
+});
+
+})();
+/*
+---
+
+script: Assets.js
+
+name: Assets
+
+description: Provides methods to dynamically load JavaScript, CSS, and Image files into the document.
+
+license: MIT-style license
+
+authors:
+  - Valerio Proietti
+
+requires:
+  - Core/Element.Event
+  - MooTools.More
+
+provides: [Assets, Asset.javascript, Asset.css, Asset.image, Asset.images]
+
+...
+*/
+;(function(){
+
+var Asset = this.Asset = {
+
+	javascript: function(source, properties){
+		if (!properties) properties = {};
+
+		var script = new Element('script', {src: source, type: 'text/javascript'}),
+			doc = properties.document || document,
+			load = properties.onload || properties.onLoad;
+
+		delete properties.onload;
+		delete properties.onLoad;
+		delete properties.document;
+
+		if (load){
+			if (!script.addEventListener){
+				script.addEvent('readystatechange', function(){
+					if (['loaded', 'complete'].contains(this.readyState)) load.call(this);
+				});
+			} else {
+				script.addEvent('load', load);
+			}
+		}
+
+		return script.set(properties).inject(doc.head);
+	},
+
+	css: function(source, properties){
+		if (!properties) properties = {};
+
+		var load = properties.onload || properties.onLoad,
+			doc = properties.document || document,
+			timeout = properties.timeout || 3000;
+
+		['onload', 'onLoad', 'document'].each(function(prop){
+			delete properties[prop];
+		});
+
+		var link = new Element('link', {
+			type: 'text/css',
+			rel: 'stylesheet',
+			media: 'screen',
+			href: source
+		}).setProperties(properties).inject(doc.head);
+
+		if (load){
+			// based on article at http://www.yearofmoo.com/2011/03/cross-browser-stylesheet-preloading.html
+			var loaded = false, retries = 0;
+			var check = function(){
+				var stylesheets = document.styleSheets;
+				for (var i = 0; i < stylesheets.length; i++){
+					var file = stylesheets[i];
+					var owner = file.ownerNode ? file.ownerNode : file.owningElement;
+					if (owner && owner == link){
+						loaded = true;
+						return load.call(link);
+					}
+				}
+				retries++;
+				if (!loaded && retries < timeout / 50) return setTimeout(check, 50);
+			};
+			setTimeout(check, 0);
+		}
+		return link;
+	},
+
+	image: function(source, properties){
+		if (!properties) properties = {};
+
+		var image = new Image(),
+			element = document.id(image) || new Element('img');
+
+		['load', 'abort', 'error'].each(function(name){
+			var type = 'on' + name,
+				cap = 'on' + name.capitalize(),
+				event = properties[type] || properties[cap] || function(){};
+
+			delete properties[cap];
+			delete properties[type];
+
+			image[type] = function(){
+				if (!image) return;
+				if (!element.parentNode){
+					element.width = image.width;
+					element.height = image.height;
+				}
+				image = image.onload = image.onabort = image.onerror = null;
+				event.delay(1, element, element);
+				element.fireEvent(name, element, 1);
+			};
+		});
+
+		image.src = element.src = source;
+		if (image && image.complete) image.onload.delay(1);
+		return element.set(properties);
+	},
+
+	images: function(sources, options){
+		sources = Array.convert(sources);
+
+		var fn = function(){},
+			counter = 0;
+
+		options = Object.merge({
+			onComplete: fn,
+			onProgress: fn,
+			onError: fn,
+			properties: {}
+		}, options);
+
+		return new Elements(sources.map(function(source, index){
+			return Asset.image(source, Object.append(options.properties, {
+				onload: function(){
+					counter++;
+					options.onProgress.call(this, counter, index, source);
+					if (counter == sources.length) options.onComplete();
+				},
+				onerror: function(){
+					counter++;
+					options.onError.call(this, counter, index, source);
+					if (counter == sources.length) options.onComplete();
+				}
+			}));
+		}));
+	}
+
 };
 
 })();
@@ -9751,686 +10568,176 @@ String.implement({
 /*
 ---
 
-script: Assets.js
+name: Swiff
 
-name: Assets
+description: Wrapper for embedding SWF movies. Supports External Interface Communication.
 
-description: Provides methods to dynamically load JavaScript, CSS, and Image files into the document.
+license: MIT-style license.
 
-license: MIT-style license
+credits:
+  - Flash detection & Internet Explorer + Flash Player 9 fix inspired by SWFObject.
 
-authors:
-  - Valerio Proietti
+requires: [Core/Options, Core/Object, Core/Element]
 
-requires:
-  - Core/Element.Event
-  - MooTools.More
-
-provides: [Assets, Asset.javascript, Asset.css, Asset.image, Asset.images]
+provides: Swiff
 
 ...
 */
-;(function(){
 
-var Asset = this.Asset = {
+(function(){
 
-	javascript: function(source, properties){
-		if (!properties) properties = {};
+var Swiff = this.Swiff = new Class({
 
-		var script = new Element('script', {src: source, type: 'text/javascript'}),
-			doc = properties.document || document,
-			load = properties.onload || properties.onLoad;
+	Implements: Options,
 
-		delete properties.onload;
-		delete properties.onLoad;
-		delete properties.document;
+	options: {
+		id: null,
+		height: 1,
+		width: 1,
+		container: null,
+		properties: {},
+		params: {
+			quality: 'high',
+			allowScriptAccess: 'always',
+			wMode: 'window',
+			swLiveConnect: true
+		},
+		callBacks: {},
+		vars: {}
+	},
 
-		if (load){
-			if (!script.addEventListener){
-				script.addEvent('readystatechange', function(){
-					if (['loaded', 'complete'].contains(this.readyState)) load.call(this);
-				});
-			} else {
-				script.addEvent('load', load);
-			}
+	toElement: function(){
+		return this.object;
+	},
+
+	initialize: function(path, options){
+		this.instance = 'Swiff_' + String.uniqueID();
+
+		this.setOptions(options);
+		options = this.options;
+		var id = this.id = options.id || this.instance;
+		var container = document.id(options.container);
+
+		Swiff.CallBacks[this.instance] = {};
+
+		var params = options.params, vars = options.vars, callBacks = options.callBacks;
+		var properties = Object.append({height: options.height, width: options.width}, options.properties);
+
+		var self = this;
+
+		for (var callBack in callBacks){
+			Swiff.CallBacks[this.instance][callBack] = (function(option){
+				return function(){
+					return option.apply(self.object, arguments);
+				};
+			})(callBacks[callBack]);
+			vars[callBack] = 'Swiff.CallBacks.' + this.instance + '.' + callBack;
 		}
 
-		return script.set(properties).inject(doc.head);
-	},
-
-	css: function(source, properties){
-		if (!properties) properties = {};
-
-		var load = properties.onload || properties.onLoad,
-			doc = properties.document || document,
-			timeout = properties.timeout || 3000;
-
-		['onload', 'onLoad', 'document'].each(function(prop){
-			delete properties[prop];
-		});
-
-		var link = new Element('link', {
-			type: 'text/css',
-			rel: 'stylesheet',
-			media: 'screen',
-			href: source
-		}).setProperties(properties).inject(doc.head);
-
-		if (load){
-			// based on article at http://www.yearofmoo.com/2011/03/cross-browser-stylesheet-preloading.html
-			var loaded = false, retries = 0;
-			var check = function(){
-				var stylesheets = document.styleSheets;
-				for (var i = 0; i < stylesheets.length; i++){
-					var file = stylesheets[i];
-					var owner = file.ownerNode ? file.ownerNode : file.owningElement;
-					if (owner && owner == link){
-						loaded = true;
-						return load.call(link);
-					}
-				}
-				retries++;
-				if (!loaded && retries < timeout / 50) return setTimeout(check, 50);
-			};
-			setTimeout(check, 0);
+		params.flashVars = Object.toQueryString(vars);
+		if ('ActiveXObject' in window){
+			properties.classid = 'clsid:D27CDB6E-AE6D-11cf-96B8-444553540000';
+			params.movie = path;
+		} else {
+			properties.type = 'application/x-shockwave-flash';
 		}
-		return link;
+		properties.data = path;
+
+		var build = '<object id="' + id + '"';
+		for (var property in properties) build += ' ' + property + '="' + properties[property] + '"';
+		build += '>';
+		for (var param in params){
+			if (params[param]) build += '<param name="' + param + '" value="' + params[param] + '" />';
+		}
+		build += '</object>';
+		this.object = ((container) ? container.empty() : new Element('div')).set('html', build).firstChild;
 	},
 
-	image: function(source, properties){
-		if (!properties) properties = {};
-
-		var image = new Image(),
-			element = document.id(image) || new Element('img');
-
-		['load', 'abort', 'error'].each(function(name){
-			var type = 'on' + name,
-				cap = 'on' + name.capitalize(),
-				event = properties[type] || properties[cap] || function(){};
-
-			delete properties[cap];
-			delete properties[type];
-
-			image[type] = function(){
-				if (!image) return;
-				if (!element.parentNode){
-					element.width = image.width;
-					element.height = image.height;
-				}
-				image = image.onload = image.onabort = image.onerror = null;
-				event.delay(1, element, element);
-				element.fireEvent(name, element, 1);
-			};
-		});
-
-		image.src = element.src = source;
-		if (image && image.complete) image.onload.delay(1);
-		return element.set(properties);
+	replaces: function(element){
+		element = document.id(element, true);
+		element.parentNode.replaceChild(this.toElement(), element);
+		return this;
 	},
 
-	images: function(sources, options){
-		sources = Array.convert(sources);
+	inject: function(element){
+		document.id(element, true).appendChild(this.toElement());
+		return this;
+	},
 
-		var fn = function(){},
-			counter = 0;
-
-		options = Object.merge({
-			onComplete: fn,
-			onProgress: fn,
-			onError: fn,
-			properties: {}
-		}, options);
-
-		return new Elements(sources.map(function(source, index){
-			return Asset.image(source, Object.append(options.properties, {
-				onload: function(){
-					counter++;
-					options.onProgress.call(this, counter, index, source);
-					if (counter == sources.length) options.onComplete();
-				},
-				onerror: function(){
-					counter++;
-					options.onError.call(this, counter, index, source);
-					if (counter == sources.length) options.onComplete();
-				}
-			}));
-		}));
+	remote: function(){
+		return Swiff.remote.apply(Swiff, [this.toElement()].append(arguments));
 	}
 
+});
+
+Swiff.CallBacks = {};
+
+Swiff.remote = function(obj, fn){
+	var rs = obj.CallFunction('<invoke name="' + fn + '" returntype="javascript">' + __flash__argumentsToXML(arguments, 2) + '</invoke>');
+	return eval(rs);
 };
 
 })();
 /*
 ---
-
-script: Class.Occlude.js
-
-name: Class.Occlude
-
-description: Prevents a class from being applied to a DOM element twice.
-
-license: MIT-style license.
-
-authors:
-  - Aaron Newton
-
-requires:
-  - Core/Class
-  - Core/Element
-  - MooTools.More
-
-provides: [Class.Occlude]
-
-...
-*/
-
-Class.Occlude = new Class({
-
-	occlude: function(property, element){
-		element = document.id(element || this.element);
-		var instance = element.retrieve(property || this.property);
-		if (instance && !this.occluded)
-			return (this.occluded = instance);
-
-		this.occluded = false;
-		element.store(property || this.property, this);
-		return this.occluded;
-	}
-
-});
-/*
----
-
-script: Drag.js
-
-name: Drag
-
-description: The base Drag Class. Can be used to drag and resize Elements using mouse events.
-
+name: Table
+description: LUA-Style table implementation.
 license: MIT-style license
-
 authors:
   - Valerio Proietti
-  - Tom Occhinno
-  - Jan Kassens
-
-requires:
-  - Core/Events
-  - Core/Options
-  - Core/Element.Event
-  - Core/Element.Style
-  - Core/Element.Dimensions
-  - MooTools.More
-
-provides: [Drag]
+requires: [Core/Array]
+provides: [Table]
 ...
-
 */
+
 (function(){
 
-var Drag = this.Drag = new Class({
+var Table = this.Table = function(){
 
-	Implements: [Events, Options],
+	this.length = 0;
+	var keys = [],
+		values = [];
 
-	options: {/*
-		onBeforeStart: function(thisElement){},
-		onStart: function(thisElement, event){},
-		onSnap: function(thisElement){},
-		onDrag: function(thisElement, event){},
-		onCancel: function(thisElement){},
-		onComplete: function(thisElement, event){},*/
-		snap: 6,
-		unit: 'px',
-		grid: false,
-		style: true,
-		limit: false,
-		handle: false,
-		invert: false,
-		unDraggableTags: ['button', 'input', 'a', 'textarea', 'select', 'option'],
-		preventDefault: false,
-		stopPropagation: false,
-		compensateScroll: false,
-		modifiers: {x: 'left', y: 'top'}
-	},
-
-	initialize: function(){
-		var params = Array.link(arguments, {
-			'options': Type.isObject,
-			'element': function(obj){
-				return obj != null;
-			}
-		});
-
-		this.element = document.id(params.element);
-		this.document = this.element.getDocument();
-		this.setOptions(params.options || {});
-		var htype = typeOf(this.options.handle);
-		this.handles = ((htype == 'array' || htype == 'collection') ? $$(this.options.handle) : document.id(this.options.handle)) || this.element;
-		this.mouse = {'now': {}, 'pos': {}};
-		this.value = {'start': {}, 'now': {}};
-		this.offsetParent = (function(el){
-			var offsetParent = el.getOffsetParent();
-			var isBody = !offsetParent || (/^(?:body|html)$/i).test(offsetParent.tagName);
-			return isBody ? window : document.id(offsetParent);
-		})(this.element);
-		this.selection = 'selectstart' in document ? 'selectstart' : 'mousedown';
-
-		this.compensateScroll = {start: {}, diff: {}, last: {}};
-
-		if ('ondragstart' in document && !('FileReader' in window) && !Drag.ondragstartFixed){
-			document.ondragstart = Function.convert(false);
-			Drag.ondragstartFixed = true;
-		}
-
-		this.bound = {
-			start: this.start.bind(this),
-			check: this.check.bind(this),
-			drag: this.drag.bind(this),
-			stop: this.stop.bind(this),
-			cancel: this.cancel.bind(this),
-			eventStop: Function.convert(false),
-			scrollListener: this.scrollListener.bind(this)
-		};
-		this.attach();
-	},
-
-	attach: function(){
-		this.handles.addEvent('mousedown', this.bound.start);
-		this.handles.addEvent('touchstart', this.bound.start);
-		if (this.options.compensateScroll) this.offsetParent.addEvent('scroll', this.bound.scrollListener);
-		return this;
-	},
-
-	detach: function(){
-		this.handles.removeEvent('mousedown', this.bound.start);
-		this.handles.removeEvent('touchstart', this.bound.start);
-		if (this.options.compensateScroll) this.offsetParent.removeEvent('scroll', this.bound.scrollListener);
-		return this;
-	},
-
-	scrollListener: function(){
-
-		if (!this.mouse.start) return;
-		var newScrollValue = this.offsetParent.getScroll();
-
-		if (this.element.getStyle('position') == 'absolute'){
-			var scrollDiff = this.sumValues(newScrollValue, this.compensateScroll.last, -1);
-			this.mouse.now = this.sumValues(this.mouse.now, scrollDiff, 1);
+	this.set = function(key, value){
+		var index = keys.indexOf(key);
+		if (index == -1){
+			var length = keys.length;
+			keys[length] = key;
+			values[length] = value;
+			this.length++;
 		} else {
-			this.compensateScroll.diff = this.sumValues(newScrollValue, this.compensateScroll.start, -1);
+			values[index] = value;
 		}
-		if (this.offsetParent != window) this.compensateScroll.diff = this.sumValues(this.compensateScroll.start, newScrollValue, -1);
-		this.compensateScroll.last = newScrollValue;
-		this.render(this.options);
-	},
+		return this;
+	};
 
-	sumValues: function(alpha, beta, op){
-		var sum = {}, options = this.options;
-		for (var z in options.modifiers){
-			if (!options.modifiers[z]) continue;
-			sum[z] = alpha[z] + beta[z] * op;
+	this.get = function(key){
+		var index = keys.indexOf(key);
+		return (index == -1) ? null : values[index];
+	};
+
+	this.erase = function(key){
+		var index = keys.indexOf(key);
+		if (index != -1){
+			this.length--;
+			keys.splice(index, 1);
+			return values.splice(index, 1)[0];
 		}
-		return sum;
-	},
+		return null;
+	};
 
-	start: function(event){
-		if (this.options.unDraggableTags.contains(event.target.get('tag'))) return;
+	this.each = this.forEach = function(fn, bind){
+		for (var i = 0, l = this.length; i < l; i++) fn.call(bind, keys[i], values[i], this);
+	};
 
-		var options = this.options;
+};
 
-		if (event.rightClick) return;
-
-		if (options.preventDefault) event.preventDefault();
-		if (options.stopPropagation) event.stopPropagation();
-		this.compensateScroll.start = this.compensateScroll.last = this.offsetParent.getScroll();
-		this.compensateScroll.diff = {x: 0, y: 0};
-		this.mouse.start = event.page;
-		this.fireEvent('beforeStart', this.element);
-
-		var limit = options.limit;
-		this.limit = {x: [], y: []};
-
-		var z, coordinates, offsetParent = this.offsetParent == window ? null : this.offsetParent;
-		for (z in options.modifiers){
-			if (!options.modifiers[z]) continue;
-
-			var style = this.element.getStyle(options.modifiers[z]);
-
-			// Some browsers (IE and Opera) don't always return pixels.
-			if (style && !style.match(/px$/)){
-				if (!coordinates) coordinates = this.element.getCoordinates(offsetParent);
-				style = coordinates[options.modifiers[z]];
-			}
-
-			if (options.style) this.value.now[z] = (style || 0).toInt();
-			else this.value.now[z] = this.element[options.modifiers[z]];
-
-			if (options.invert) this.value.now[z] *= -1;
-
-			this.mouse.pos[z] = event.page[z] - this.value.now[z];
-
-			if (limit && limit[z]){
-				var i = 2;
-				while (i--){
-					var limitZI = limit[z][i];
-					if (limitZI || limitZI === 0) this.limit[z][i] = (typeof limitZI == 'function') ? limitZI() : limitZI;
-				}
-			}
-		}
-
-		if (typeOf(this.options.grid) == 'number') this.options.grid = {
-			x: this.options.grid,
-			y: this.options.grid
-		};
-
-		var events = {
-			mousemove: this.bound.check,
-			mouseup: this.bound.cancel,
-			touchmove: this.bound.check,
-			touchend: this.bound.cancel
-		};
-		events[this.selection] = this.bound.eventStop;
-		this.document.addEvents(events);
-	},
-
-	check: function(event){
-		if (this.options.preventDefault) event.preventDefault();
-		var distance = Math.round(Math.sqrt(Math.pow(event.page.x - this.mouse.start.x, 2) + Math.pow(event.page.y - this.mouse.start.y, 2)));
-		if (distance > this.options.snap){
-			this.cancel();
-			this.document.addEvents({
-				mousemove: this.bound.drag,
-				mouseup: this.bound.stop,
-				touchmove: this.bound.drag,
-				touchend: this.bound.stop
-			});
-			this.fireEvent('start', [this.element, event]).fireEvent('snap', this.element);
-		}
-	},
-
-	drag: function(event){
-		var options = this.options;
-		if (options.preventDefault) event.preventDefault();
-		this.mouse.now = this.sumValues(event.page, this.compensateScroll.diff, -1);
-
-		this.render(options);
-		this.fireEvent('drag', [this.element, event]);
-	},
-
-	render: function(options){
-		for (var z in options.modifiers){
-			if (!options.modifiers[z]) continue;
-			this.value.now[z] = this.mouse.now[z] - this.mouse.pos[z];
-
-			if (options.invert) this.value.now[z] *= -1;
-			if (options.limit && this.limit[z]){
-				if ((this.limit[z][1] || this.limit[z][1] === 0) && (this.value.now[z] > this.limit[z][1])){
-					this.value.now[z] = this.limit[z][1];
-				} else if ((this.limit[z][0] || this.limit[z][0] === 0) && (this.value.now[z] < this.limit[z][0])){
-					this.value.now[z] = this.limit[z][0];
-				}
-			}
-			if (options.grid[z]) this.value.now[z] -= ((this.value.now[z] - (this.limit[z][0]||0)) % options.grid[z]);
-			if (options.style) this.element.setStyle(options.modifiers[z], this.value.now[z] + options.unit);
-			else this.element[options.modifiers[z]] = this.value.now[z];
-		}
-	},
-
-	cancel: function(event){
-		this.document.removeEvents({
-			mousemove: this.bound.check,
-			mouseup: this.bound.cancel,
-			touchmove: this.bound.check,
-			touchend: this.bound.cancel
-		});
-		if (event){
-			this.document.removeEvent(this.selection, this.bound.eventStop);
-			this.fireEvent('cancel', this.element);
-		}
-	},
-
-	stop: function(event){
-		var events = {
-			mousemove: this.bound.drag,
-			mouseup: this.bound.stop,
-			touchmove: this.bound.drag,
-			touchend: this.bound.stop
-		};
-		events[this.selection] = this.bound.eventStop;
-		this.document.removeEvents(events);
-		this.mouse.start = null;
-		if (event) this.fireEvent('complete', [this.element, event]);
-	}
-
-});
+if (this.Type) new Type('Table', Table);
 
 })();
-
-
-Element.implement({
-
-	makeResizable: function(options){
-		var drag = new Drag(this, Object.merge({
-			modifiers: {
-				x: 'width',
-				y: 'height'
-			}
-		}, options));
-
-		this.store('resizer', drag);
-		return drag.addEvent('drag', function(){
-			this.fireEvent('resize', drag);
-		}.bind(this));
-	}
-
-});
-/*
----
-
-script: Drag.Move.js
-
-name: Drag.Move
-
-description: A Drag extension that provides support for the constraining of draggables to containers and droppables.
-
-license: MIT-style license
-
-authors:
-  - Valerio Proietti
-  - Tom Occhinno
-  - Jan Kassens
-  - Aaron Newton
-  - Scott Kyle
-
-requires:
-  - Core/Element.Dimensions
-  - Drag
-
-provides: [Drag.Move]
-
-...
-*/
-
-Drag.Move = new Class({
-
-	Extends: Drag,
-
-	options: {/*
-		onEnter: function(thisElement, overed){},
-		onLeave: function(thisElement, overed){},
-		onDrop: function(thisElement, overed, event){},*/
-		droppables: [],
-		container: false,
-		precalculate: false,
-		includeMargins: true,
-		checkDroppables: true
-	},
-
-	initialize: function(element, options){
-		this.parent(element, options);
-		element = this.element;
-
-		this.droppables = $$(this.options.droppables);
-		this.setContainer(this.options.container);
-
-		if (this.options.style){
-			if (this.options.modifiers.x == 'left' && this.options.modifiers.y == 'top'){
-				var parent = element.getOffsetParent(),
-					styles = element.getStyles('left', 'top');
-				if (parent && (styles.left == 'auto' || styles.top == 'auto')){
-					element.setPosition(element.getPosition(parent));
-				}
-			}
-
-			if (element.getStyle('position') == 'static') element.setStyle('position', 'absolute');
-		}
-
-		this.addEvent('start', this.checkDroppables, true);
-		this.overed = null;
-	},
-
-	setContainer: function(container){
-		this.container = document.id(container);
-		if (this.container && typeOf(this.container) != 'element'){
-			this.container = document.id(this.container.getDocument().body);
-		}
-	},
-
-	start: function(event){
-		if (this.container) this.options.limit = this.calculateLimit();
-
-		if (this.options.precalculate){
-			this.positions = this.droppables.map(function(el){
-				return el.getCoordinates();
-			});
-		}
-
-		this.parent(event);
-	},
-
-	calculateLimit: function(){
-		var element = this.element,
-			container = this.container,
-
-			offsetParent = document.id(element.getOffsetParent()) || document.body,
-			containerCoordinates = container.getCoordinates(offsetParent),
-			elementMargin = {},
-			elementBorder = {},
-			containerMargin = {},
-			containerBorder = {},
-			offsetParentPadding = {},
-			offsetScroll = offsetParent.getScroll();
-
-		['top', 'right', 'bottom', 'left'].each(function(pad){
-			elementMargin[pad] = element.getStyle('margin-' + pad).toInt();
-			elementBorder[pad] = element.getStyle('border-' + pad).toInt();
-			containerMargin[pad] = container.getStyle('margin-' + pad).toInt();
-			containerBorder[pad] = container.getStyle('border-' + pad).toInt();
-			offsetParentPadding[pad] = offsetParent.getStyle('padding-' + pad).toInt();
-		}, this);
-
-		var width = element.offsetWidth + elementMargin.left + elementMargin.right,
-			height = element.offsetHeight + elementMargin.top + elementMargin.bottom,
-			left = 0 + offsetScroll.x,
-			top = 0 + offsetScroll.y,
-			right = containerCoordinates.right - containerBorder.right - width + offsetScroll.x,
-			bottom = containerCoordinates.bottom - containerBorder.bottom - height + offsetScroll.y;
-
-		if (this.options.includeMargins){
-			left += elementMargin.left;
-			top += elementMargin.top;
-		} else {
-			right += elementMargin.right;
-			bottom += elementMargin.bottom;
-		}
-
-		if (element.getStyle('position') == 'relative'){
-			var coords = element.getCoordinates(offsetParent);
-			coords.left -= element.getStyle('left').toInt();
-			coords.top -= element.getStyle('top').toInt();
-
-			left -= coords.left;
-			top -= coords.top;
-			if (container.getStyle('position') != 'relative'){
-				left += containerBorder.left;
-				top += containerBorder.top;
-			}
-			right += elementMargin.left - coords.left;
-			bottom += elementMargin.top - coords.top;
-
-			if (container != offsetParent){
-				left += containerMargin.left + offsetParentPadding.left;
-				if (!offsetParentPadding.left && left < 0) left = 0;
-				top += offsetParent == document.body ? 0 : containerMargin.top + offsetParentPadding.top;
-				if (!offsetParentPadding.top && top < 0) top = 0;
-			}
-		} else {
-			left -= elementMargin.left;
-			top -= elementMargin.top;
-			if (container != offsetParent){
-				left += containerCoordinates.left + containerBorder.left;
-				top += containerCoordinates.top + containerBorder.top;
-			}
-		}
-
-		return {
-			x: [left, right],
-			y: [top, bottom]
-		};
-	},
-
-	getDroppableCoordinates: function(element){
-		var position = element.getCoordinates();
-		if (element.getStyle('position') == 'fixed'){
-			var scroll = window.getScroll();
-			position.left += scroll.x;
-			position.right += scroll.x;
-			position.top += scroll.y;
-			position.bottom += scroll.y;
-		}
-		return position;
-	},
-
-	checkDroppables: function(){
-		var overed = this.droppables.filter(function(el, i){
-			el = this.positions ? this.positions[i] : this.getDroppableCoordinates(el);
-			var now = this.mouse.now;
-			return (now.x > el.left && now.x < el.right && now.y < el.bottom && now.y > el.top);
-		}, this).getLast();
-
-		if (this.overed != overed){
-			if (this.overed) this.fireEvent('leave', [this.element, this.overed]);
-			if (overed) this.fireEvent('enter', [this.element, overed]);
-			this.overed = overed;
-		}
-	},
-
-	drag: function(event){
-		this.parent(event);
-		if (this.options.checkDroppables && this.droppables.length) this.checkDroppables();
-	},
-
-	stop: function(event){
-		this.checkDroppables();
-		this.fireEvent('drop', [this.element, this.overed, event]);
-		this.overed = null;
-		return this.parent(event);
-	}
-
-});
-
-Element.implement({
-
-	makeDraggable: function(options){
-		var drag = new Drag.Move(this, options);
-		this.store('dragger', drag);
-		return drag;
-	}
-
-});
 //Locale.define('en-US', 'Dummy', 'dummy', 'dummy');
 //Locale.use('en-US');
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/Ngn.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/Ngn.js|--*/
 Ngn.toObj = function(s, value) {
   var a = s.split('.');
   for (var i = 0; i < a.length; i++) {
@@ -10443,7 +10750,153 @@ Ngn.toObj = function(s, value) {
 
 if (!Ngn.tpls) Ngn.tpls = {};
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/Ngn.RequiredOptions.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/Ngn.Items.js|--*/
+Ngn.Items = new Class({
+  Implements: [Options, Events],
+  
+  options: {
+    idParam: 'id',
+    mainElementSelector: '.mainContent',
+    eItems: 'items',
+    itemElementSelector: '.item',
+    deleteAction: 'delete',
+    isSorting: false,
+    itemsLayout: 'details',
+    reloadOnDelete: false,
+    disableInit: false
+  },
+  
+  initialize: function(options) {
+    this.setOptions(options);
+    this.options.itemDoubleParent = this.options.itemsLayout == 'tile' ? false : true;
+    if (!this.options.disableInit) this.init();
+    return this;
+  },
+
+  init: function() {
+    this.initItems();
+  },
+  
+  getId: function(eItem) {
+    if (!eItem.get('id')) console.debug(eItem);
+    return eItem.get('id').split('_')[1];
+  },
+
+  toolBtnAction: function(cls, action) {
+    for (var i=0; i<this.esItems.length; i++) {
+      var id = this.getId(this.esItems[i]);
+      Ngn.addBtnAction('.tools a[.'+cls+']', action.pass(id), this.esItems[i]);
+    }
+  },
+  
+  initItems: function() {
+    this.eItems = $(this.options.eItems);
+    var esItems = this.eItems.getElements(this.options.itemElementSelector);
+    this.esItems = {};
+    for (var i=0; i<esItems.length; i++) {
+      var id = this.getId(esItems[i]);
+      this.esItems[id] = esItems[i];
+      this.esItems[id].store('itemId', id);
+    }
+    this.initToolActions();
+  },
+
+  loading: function(id, flag) {
+    if (!this.esItems[id]) return;
+    flag ? this.esItems[id].addClass('loading') : this.esItems[id].removeClass('loading');
+  },
+
+  initToolActions: function() {
+    this.addBtnsActions([
+      ['.delete', function(id, eBtn, eItem) {
+        new Ngn.Dialog.Confirm.Mem({
+          id: 'itemsDelete',
+          notAskSomeTime: true,
+          onOkClose: function() {
+            this.loading(id, true);
+            var g = {};
+            g[this.options.idParam] = id;
+            new Request(Object.merge({
+              url: this.getLink() + '/ajax_' + this.options.deleteAction,
+              onComplete: function() {
+                this.options.reloadOnDelete ? this.reload() : eItem.destroy();
+              }.bind(this)
+            }, this.options.requestOptions)).post(g);
+          }.bind(this)
+        });
+      }.bind(this)],
+      ['a[class~=flagOn],a[class~=flagOff]', function(id, eBtn) {
+        /*
+        var eFlagName = eBtn.getElement('i');
+        var flagName = eFlagName.get('title');
+        eFlagName.removeProperty('title');
+        el.addEvent('click', function(e){
+          var flag = eBtn.get('class').match(/flagOn/) ? true : false;
+          e.preventDefault();
+          //eLoading.addClass('loading');
+          var post = {};
+          post[this.options.idParam] = id;
+          post.k = flagName;
+          post.v = flag ? 0 : 1;
+          new Request({
+            url: window.location.pathname + '?a=ajax_updateDirect',
+            onComplete: function() {
+              eBtn.removeClass(flag ? 'flagOn' : 'flagOff');
+              eBtn.addClass(flag ? 'flagOff' : 'flagOn');
+              //eLoading.removeClass('loading');
+            }
+          }).GET(post);
+        }.bind(this));
+        */
+      }.bind(this)]
+    ]);
+    this.addBtnAction();
+  },
+
+  switcherClasses: [],
+
+  _addBtnAction: function(eItem, selector, action) {
+    if (!eItem) return;
+    var eBtn = eItem.getElement(selector);
+    if (!eBtn) return;
+    eBtn.addEvent('click', function(e){
+      e.preventDefault();
+      action(eItem.retrieve('itemId'), eBtn, eItem);
+    }.bind(this));
+  },
+
+  addBtnAction: function(selector, action) {
+    Object.every(this.esItems, function(eItem) {
+      this._addBtnAction(eItem, selector, action);
+    }.bind(this));
+  },
+  
+  addBtnsActions: function(actions) {
+    for (var i in this.esItems) {
+      var eItem = this.esItems[i];
+      for (var j=0; j<actions.length; j++) {
+        this._addBtnAction(eItem, actions[j][0], actions[j][1]);
+      }
+    }
+  },
+  
+  reload: function() {
+    Ngn.Request.Iface.loading(true);
+    new Request({
+      url: window.location.pathname + '?a=ajax_reload',
+      onComplete: function(html) {
+        this.eItems.empty();
+        this.eItems.set('html', html);
+        this.init();
+        Ngn.cp.initTooltips();
+        Ngn.Request.Iface.loading(false);
+        this.fireEvent('reloadComplete');
+      }.bind(this)
+    }).send();
+  }
+
+});
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.RequiredOptions.js|--*/
 Ngn.RequiredOptions = new Class({
   Extends: Options,
 
@@ -10460,7 +10913,7 @@ Ngn.RequiredOptions = new Class({
 
 });
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/Ngn.Locale.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.Locale.js|--*/
 Ngn.Locale = {
   get: function(key) {
     return Locale.get(key) || Ngn.String.ucfirst(String(key).replace(/\w+\.(.+)/g, '$1').replace(/[A-Z]/g, function(match){
@@ -10468,7 +10921,7 @@ Ngn.Locale = {
     }));
   }
 };
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/Ngn.String.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.String.js|--*/
 Ngn.String = {};
 Ngn.String.rand = function(len) {
   var allchars = 'abcdefghijknmpqrstuvwxyzABCDEFGHIJKLNMPQRSTUVWXYZ'.split('');
@@ -10500,15 +10953,15 @@ Ngn.String.trim = function(s) {
 };
 
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/Ngn.Number.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.Number.js|--*/
 Ngn.Number = {};
 Ngn.Number.randomInt = function(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/more/scripts/js/locale.php| (with request data)--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/more/scripts/js/locale.php| (with request data)--*/
 Locale.define("ru-RU", "Core", {"add":"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c","clean":"\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c","delete":"\u0423\u0434\u0430\u043b\u0438\u0442\u044c","edit":"\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c","cancel":"\u041e\u0442\u043c\u0435\u043d\u0430","upload":"\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c","uploading":"\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430","uploadComplete":"\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0430","change":"\u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c","areYouSure":"\u0412\u044b \u0443\u0432\u0435\u0440\u0435\u043d\u044b?","loading":"\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430","save":"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c","fontSize":"\u0420\u0430\u0437\u043c\u0435\u0440 \u0448\u0440\u0438\u0444\u0442\u0430","color":"\u0426\u0432\u0435\u0442","font":"\u0428\u0440\u0438\u0444\u0442","create":"\u0421\u043e\u0437\u0434\u0430\u0442\u044c","search":"\u041f\u043e\u0438\u0441\u043a","totalItemsCount":"\u0412\u0441\u0435\u0433\u043e \u0437\u0430\u043f\u0438\u0441\u0435\u0439","doNotAskMeSomeTimeAboutThat":"\u041d\u0435 \u0441\u043f\u0440\u0430\u0448\u0438\u0432\u0430\u0442\u044c \u043c\u0435\u043d\u044f \u043e\u0431 \u044d\u0442\u043e\u043c \u043a\u0430\u043a\u043e\u0435-\u0442\u043e \u0432\u0440\u0435\u043c\u044f","doNotAskMeAnymoreAboutThat":"\u0411\u043e\u043b\u044c\u0448\u0435 \u043d\u0435 \u0441\u043f\u0440\u0430\u0448\u0438\u0432\u0430\u0442\u044c \u043f\u043e \u044d\u0442\u043e\u043c\u0443 \u043f\u043e\u0432\u043e\u0434\u0443","creationDate":"\u0414\u0430\u0442\u0430 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u044f","updateDate":"\u0414\u0430\u0442\u0430 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f","author":"\u0410\u0432\u0442\u043e\u0440","yes":"\u0414\u0430","no":"\u041d\u0435\u0442","at":"\u0432","userDoesNotExists":"\u0418\u043c\u044f \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0438 \u043f\u0430\u0440\u043e\u043b\u044c \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u044e\u0442 \u0438\u043b\u0438 \u0443 \u0432\u0430\u0441 \u0435\u0449\u0451 \u043d\u0435\u0442 \u0443\u0447\u0451\u0442\u043d\u043e\u0439 \u0437\u0430\u043f\u0438\u0441\u0438 \u043d\u0430 \u0441\u0430\u0439\u0442\u0435","wrongPassword":"\u0418\u043c\u044f \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0438 \u043f\u0430\u0440\u043e\u043b\u044c \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u044e\u0442 \u0438\u043b\u0438 \u0443 \u0432\u0430\u0441 \u0435\u0449\u0451 \u043d\u0435\u0442 \u0443\u0447\u0451\u0442\u043d\u043e\u0439 \u0437\u0430\u043f\u0438\u0441\u0438 \u043d\u0430 \u0441\u0430\u0439\u0442\u0435"});
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.js|--*/
 // @requiresBefore s2/js/locale?key=core
 Ngn.Dialog = new Class({
   Implements: [Ngn.RequiredOptions, Events],
@@ -10996,7 +11449,7 @@ Ngn.Dialog.openWhenClosed = function(closingDialogObject, openDialogClass, optio
 
 Ngn.Dialog.dialogs = new Hash({});
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.VResize.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.VResize.js|--*/
 Ngn.Dialog.VResize = new Class({
 
   initialize: function(dialog) {
@@ -11030,7 +11483,7 @@ Ngn.Dialog.VResize = new Class({
 
 });
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/Ngn.Element.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.Element.js|--*/
 Ngn.Element = {};
 
 Ngn.Element._whenElPresents = function(elGetter, action, maxAttempts) {
@@ -11085,7 +11538,7 @@ Ngn.Element.setTip = function(el, title) {
   }
 };
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/Ngn.Storage.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.Storage.js|--*/
 Ngn.Storage = {
   get: function(key) {
     if (localStorage) {
@@ -11144,7 +11597,7 @@ Ngn.Storage.json = {
   }
 };
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/Ngn.LocalStorage.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.LocalStorage.js|--*/
 Ngn.LocalStorage = {
 
   clean: function() {
@@ -11179,7 +11632,7 @@ Ngn.LocalStorage.json = {
 
 };
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/Ngn.Request.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/Ngn.Request.js|--*/
 Ngn.Request = new Class({
   Extends: Request,
 
@@ -11317,7 +11770,7 @@ Ngn.Request.settings = function(name, callback) {
   });
 };
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/Ngn.Arr.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.Arr.js|--*/
 Ngn.Arr = {};
 Ngn.Arr.inn = function(needle, haystack, strict) {  // Checks if a value exists in an array
   var found = false, key, strict = !!strict;
@@ -11335,7 +11788,7 @@ Ngn.Arr.drop = function(array, value) {
 };
 
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/controls/Ngn.Btn.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/controls/Ngn.Btn.js|--*/
 // @requires Ngn.Frm
 
 Ngn.Btn = new Class({
@@ -11564,97 +12017,7 @@ Ngn.Btn.addAjaxAction = function(eBtn, action, onComplete) {
   });
 };
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Msg.js|--*/
-Ngn.Dialog.Msg = new Class({
-  Extends: Ngn.Dialog,
-
-  options: {
-    noPadding: false,
-    messageAreaClass: 'dialog-message large',
-    title: false
-  }
-
-});
-
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Confirm.js|--*/
-// @requiresBefore s2/js/locale?key=core
-Ngn.Dialog.Confirm = new Class({
-  Extends: Ngn.Dialog.Msg,
-
-  options: {
-    width: 300,
-    message: Locale.get('Core.areYouSure')
-  },
-
-  initialize: function(_opts) {
-    var opts = Object.merge(_opts, {
-      cancel: false,
-      titleClose: false,
-      ok: this.closeAction.bind(this, true),
-      cancel: this.closeAction.bind(this, false)
-    });
-    this.parent(opts);
-  },
-
-  closeAction: function(_confirmed) {
-    _confirmed ? this.okClose() : this.close();
-  }
-
-});
-
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Confirm.Mem.js|--*/
-Ngn.Dialog.Confirm.Mem = new Class({
-  Extends: Ngn.Dialog.Confirm,
-
-  options: {
-    width: 250,
-    okText: Ngn.Locale.get('core.delete'),
-    bindBuildMessageFunction: true,
-    notAskSomeTime: false
-  },
-
-  timeoutId: null,
-
-  initialize: function(_opts) {
-    this.setOptions(_opts);
-    this.options.dialogClass += ' dialog-confirm';
-    if (this.options.notAskSomeTime) {
-      if (this.timeoutId) clearTimeout(this.timeoutId);
-      this.timeoutId = (function() {
-        Ngn.Storage.remove(this.options.id + 'confirmMem');
-      }).delay(120000, this);
-    }
-    if (Ngn.Storage.get(this.options.id + 'confirmMem')) {
-      this.fireEvent('okClose');
-      return;
-    }
-    this.parent(_opts);
-  },
-
-  buildMessage: function(_msg) {
-    var eMessageCont = new Element('div'), checkboxCaption;
-    if (this.options.notAskSomeTime) {
-      checkboxCaption = Ngn.Locale.get('core.doNotAskMeSomeTimeAboutThat');
-    } else {
-      checkboxCaption = Ngn.Locale.get('core.doNotAskMeAnymoreAboutThat');
-    }
-    new Element('div', {'html': '<h3 style="margin-top:0px">' + _msg + '</h3>'}).inject(eMessageCont);
-    Elements.from('<span class="checkbox"><input type="checkbox" id="confirmMem' + this.options.id + '" class="confirmMem" /><label for="confirmMem' + this.options.id + '">' + checkboxCaption + '</label></span>')[0].inject(eMessageCont);
-    this.eMemCheckbox = eMessageCont.getElement('.confirmMem');
-    return eMessageCont;
-  },
-
-  finishClose: function() {
-    if (this.isOkClose) {
-      console.debug([this.options.id + 'confirmMem', this.eMemCheckbox.get('checked')]);
-      Ngn.Storage.set(this.options.id + 'confirmMem', this.eMemCheckbox.get('checked'));
-    }
-    this.parent();
-  }
-
-});
-
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/Ngn.elementExtras.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.elementExtras.js|--*/
 Element.implement({
   values: function() {
     var r = {};
@@ -11732,7 +12095,7 @@ Element.implement({
   }
 });
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/form/Ngn.Frm.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/form/Ngn.Frm.js|--*/
 Ngn.Frm = {};
 Ngn.Frm.init = {}; // объект для хранения динамических функций иниыиализации
 Ngn.Frm.html = {};
@@ -12014,7 +12377,7 @@ Ngn.Frm.maxLength = function(eForm, defaultMaxLength) {
   });
 };
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/core/controls/Ngn.Dotter.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/controls/Ngn.Dotter.js|--*/
 // @requiresBefore s2/js/locale?key=core
 Ngn.Dotter = new Class({
   Implements: [Options,Events],
@@ -12072,7 +12435,950 @@ Ngn.Dotter = new Class({
   }
 
 });
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.RequestForm.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Msg.js|--*/
+Ngn.Dialog.Msg = new Class({
+  Extends: Ngn.Dialog,
+
+  options: {
+    noPadding: false,
+    messageAreaClass: 'dialog-message large',
+    title: false
+  }
+
+});
+
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Confirm.js|--*/
+// @requiresBefore s2/js/locale?key=core
+Ngn.Dialog.Confirm = new Class({
+  Extends: Ngn.Dialog.Msg,
+
+  options: {
+    width: 300,
+    message: Locale.get('Core.areYouSure')
+  },
+
+  initialize: function(_opts) {
+    var opts = Object.merge(_opts, {
+      cancel: false,
+      titleClose: false,
+      ok: this.closeAction.bind(this, true),
+      cancel: this.closeAction.bind(this, false)
+    });
+    this.parent(opts);
+  },
+
+  closeAction: function(_confirmed) {
+    _confirmed ? this.okClose() : this.close();
+  }
+
+});
+
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Confirm.Mem.js|--*/
+Ngn.Dialog.Confirm.Mem = new Class({
+  Extends: Ngn.Dialog.Confirm,
+
+  options: {
+    width: 250,
+    okText: Ngn.Locale.get('core.delete'),
+    bindBuildMessageFunction: true,
+    notAskSomeTime: false
+  },
+
+  timeoutId: null,
+
+  initialize: function(_opts) {
+    this.setOptions(_opts);
+    this.options.dialogClass += ' dialog-confirm';
+    if (this.options.notAskSomeTime) {
+      if (this.timeoutId) clearTimeout(this.timeoutId);
+      this.timeoutId = (function() {
+        Ngn.Storage.remove(this.options.id + 'confirmMem');
+      }).delay(120000, this);
+    }
+    if (Ngn.Storage.get(this.options.id + 'confirmMem')) {
+      this.fireEvent('okClose');
+      return;
+    }
+    this.parent(_opts);
+  },
+
+  buildMessage: function(_msg) {
+    var eMessageCont = new Element('div'), checkboxCaption;
+    if (this.options.notAskSomeTime) {
+      checkboxCaption = Ngn.Locale.get('core.doNotAskMeSomeTimeAboutThat');
+    } else {
+      checkboxCaption = Ngn.Locale.get('core.doNotAskMeAnymoreAboutThat');
+    }
+    new Element('div', {'html': '<h3 style="margin-top:0px">' + _msg + '</h3>'}).inject(eMessageCont);
+    Elements.from('<span class="checkbox"><input type="checkbox" id="confirmMem' + this.options.id + '" class="confirmMem" /><label for="confirmMem' + this.options.id + '">' + checkboxCaption + '</label></span>')[0].inject(eMessageCont);
+    this.eMemCheckbox = eMessageCont.getElement('.confirmMem');
+    return eMessageCont;
+  },
+
+  finishClose: function() {
+    if (this.isOkClose) {
+      console.debug([this.options.id + 'confirmMem', this.eMemCheckbox.get('checked')]);
+      Ngn.Storage.set(this.options.id + 'confirmMem', this.eMemCheckbox.get('checked'));
+    }
+    this.parent();
+  }
+
+});
+
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/Ngn.Items.Table.js|--*/
+/**
+ * Компонент для вывода и редактирования табличных данных
+ */
+Ngn.Items.Table = new Class({
+  Extends: Ngn.Items,
+
+  options: {
+    eItems: 'itemsTable', // контейнер таблицы
+    itemElementSelector: 'tbody tr', // селектор строки
+    isSorting: true,
+    handle: '.dragBox',
+    onMoveComplete: Function.from(),
+    basePath: window.location.pathname
+  },
+
+  initSorting: function() {
+    if (!this.options.isSorting) return;
+    var sortablesOptions = {};
+    if (this.options.handle) {
+      sortablesOptions.handle = this.options.handle;
+      var dragBoxes = this.eItems.getElements(this.options.handle);
+      dragBoxes.each(function(el) {
+        el.addEvent('mouseover', function() {
+          el.addClass('over');
+        });
+        el.addEvent('mouseout', function() {
+          el.removeClass('over');
+        });
+      });
+    }
+    this.ST = new Sortables(this.eItemsTableBody, sortablesOptions);
+    this.dragStarts = false;
+    this.orderState = this.ST.serialize().join(',');
+    this.ST.addEvent('complete', function(el, clone) {
+      el.removeClass('move');
+      // Если в процессе переноса или если положение не изменилось
+      if (!this.dragStarts || this.orderState == this.ST.serialize().join(',')) return;
+      el.addClass('loading');
+      new Request({
+        url: this.options.basePath + '?a=ajax_reorder',
+        onComplete: function() {
+          this.dragStarts = false;
+          //this.orderState = this.ST.serialize(false, function(el) { return el.get('data-id') }).join(',');
+          this.orderState = this.ST.serialize().join(',');
+          el.removeClass('loading');
+          this.fireEvent('moveComplete');
+        }.bind(this)
+      }).POST({
+          'ids': this.ST.serialize(false, function(el) {
+            return el.get('data-id');
+          })
+        });
+    }.bind(this));
+    this.ST.addEvent('start', function(el, clone) {
+      this.dragStarts = true;
+      el.addClass('move');
+    }.bind(this));
+    if (!this.options.handle) {
+      // Подсвечивать строку только в том случае если нет специального бокса дял переноса
+      this.eItemsTableBody.addEvents({
+        'mousedown': function(e) {
+          this.eItemsTableBody.set('styles', {'cursor': 'move'});
+        }.bind(this),
+        'mouseup': function(e) {
+          this.eItemsTableBody.set('styles', {'cursor': 'auto'});
+        }.bind(this)
+      });
+      this.eItemsTableBody.getElements('tr').each(function(el, i) {
+        el.addEvents({
+          'mousedown': function(e) {
+            el.addClass('move');
+          },
+          'mouseup': function(e) {
+            el.removeClass('move');
+          }
+        });
+      });
+    }
+  },
+
+  initItems: function() {
+    this.parent();
+    this.eItemsTableBody = this.eItems.getElement('tbody');
+    Ngn.Html.fixEmptyTds(this.eItemsTableBody);
+    this.initSorting();
+  }
+
+});
+
+Ngn.Items.toolActions = {
+
+  switcher: {
+    init: function(items, cls, row) {
+      row.tools[cls].on = !!parseInt(row.tools[cls].on);
+      if (!Ngn.Items.toolActions.switcher.switchers[cls]) throw new Error('Ngn.Items.switcher[' + cls + '] not defined');
+      var switcher = Ngn.Items.toolActions.switcher.switchers[cls];
+      if (switcher.initRowEl) switcher.initRowEl(row);
+      var switcherOpts = switcher.getOptions(items, row);
+      var el = new Element('a', {
+        'href': '#',
+        'class': 'iconBtn ' + (row.tools[cls].on ? switcherOpts.classOn : switcherOpts.classOff),
+        'html': '<i></i>',
+        'title': row.tools[cls].on ? switcherOpts.titleOn : switcherOpts.titleOff
+      }).inject(new Element('td').inject(row.eTools));
+      var switcher = new Ngn.SwitcherLink(el, switcherOpts);
+      //switcher.addEvent('click', items.loading.pass([row.id, true], items));
+      switcher.addEvent('click', function() {
+        items.loading(row.id, true);
+      });
+      switcher.addEvent('complete', items.loading.pass([row.id, false], items));
+    },
+    switchers: {
+      active: {
+        /**
+         * @param items Ngn.Items
+         * @param row
+         * @returns {{classOn: string, classOff: string, linkOn: string, linkOff: string, onComplete: onComplete}}
+         */
+        getOptions: function(items, row) {
+          return {
+            classOn: 'activate',
+            classOff: 'deactivate',
+            linkOn: items.getLink() + '?a=ajax_activate&' + items.options.idParam + '=' + row.id,
+            linkOff: items.getLink() + '?a=ajax_deactivate&' + items.options.idParam + '=' + row.id,
+            onComplete: function(enabled) {
+              items.fireEvent('reloadComplete', row.id);
+              enabled ? items.esItems[row.id].removeClass('nonActive') : items.esItems[row.id].addClass('nonActive');
+            }
+          };
+        },
+        initRowEl: function(row) {
+          if (!parseInt(row.active)) row.el.addClass('nonActive');
+        }
+      }
+    }
+  },
+
+  inlineTextEdit: {
+    init: function(items, cls, row) {
+      Ngn.Items.toolActions.inlineTextEdit.initTd(items, cls, row, row.tools[cls].elN + 1);
+    },
+    initTd: function(items, cls, row, n) {
+      var data = Object.values(row.data);
+      var eTd = row.el.getChildren('td')[n];
+      if (!eTd) throw new Ngn.EmptyError('eTd');
+      eTd.set('html', '');
+      eTd.store('eText', new Element('div', {
+        html: data[n - 1]
+      }).inject(eTd));
+      eTd.store('eInput', new Element('input', {
+        value: data[n - 1],
+        styles: {
+          display: 'none',
+          'border': '0px',
+          width: '100px'
+        }
+      }).inject(eTd));
+      var saving = false;
+      var save = function(from) {
+        if (saving) return;
+        saving = true;
+        var r = {};
+        r[items.options.idParam] = row.id;
+        r[row.tools[cls].paramName] = eTd.retrieve('eInput').get('value');
+        if (eTd.retrieve('eText').get('html') != r[row.tools[cls].paramName]) {
+          eTd.retrieve('eText').set('html', r[row.tools[cls].paramName]);
+          new Ngn.Request.JSON({
+            url: items.options.basePath + '?a=' + row.tools[cls].action,
+            onComplete: function() {
+              saving = false;
+              items.reload();
+            }
+          }).post(r);
+        } else {
+          (function() {
+            saving = false;
+          }).delay(100);
+        }
+        Ngn.Items.toolActions.inlineTextEdit.switchInput(eTd, from);
+      };
+      eTd.retrieve('eInput').addEvent('blur', save.pass('blur'));
+      eTd.retrieve('eInput').addEvent('keypress', function(e) {
+        if (e.key != 'enter') return;
+        e.preventDefault();
+        save('enter');
+      });
+      eTd.store('edit', false);
+      items.createToolBtn(cls, row, Ngn.Items.toolActions.inlineTextEdit.switchInput.pass(eTd));
+    },
+    switchInput: function(eTd, from) {
+      if (eTd.retrieve('edit')) {
+        eTd.retrieve('eInput').setStyle('display', 'none');
+        eTd.retrieve('eText').setStyle('display', 'block');
+        eTd.store('edit', false);
+      } else {
+        eTd.retrieve('eInput').setStyle('display', 'block');
+        eTd.retrieve('eInput').focus();
+        eTd.retrieve('eText').setStyle('display', 'none');
+        eTd.store('edit', true);
+      }
+    }
+  }
+
+};
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.Html.js|--*/
+Ngn.Html = {};
+
+Ngn.Html.fixEmptyTds = function(el) {
+  var tds = el.getElements('td');
+  for (var i = 0; i < tds.length; i++)
+    if (!tds[i].get('html').trim()) tds[i].set('html', '&nbsp;');
+};
+
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/Ngn.SwitcherLink.js|--*/
+Ngn.SwitcherLink = new Class({
+
+  Implements: [Options, Events],
+
+  options: {
+    textSelector: null,
+    classOn: '',
+    classOff: '',
+    linkOn: '',
+    linkOff: '',
+    titleOn: 'Включить',
+    titleOff: 'Выключить',
+    onClick: Function.from(),
+    onComplete: Function.from()
+  },
+
+  initialize: function(el, options) {
+    this.setOptions(options);
+    this.el = $(el) || el;
+    if (this.options.textSelector) this.text = this.el.getElement(this.options.textSelector);
+    if (this.el.hasClass(this.options.classOn)) {
+      Ngn.Element.setTip(this.el, this.options.titleOff);
+      if (this.text) this.text.set('text', this.options.titleOff);
+    } else {
+      Ngn.Element.setTip(this.el, this.options.titleOn);
+      if (this.text) this.text.set('text', this.options.titleOn);
+    }
+    this.setTip(this.el.hasClass(this.options.classOn));
+    this.el.addEvent('click', function(e) {
+      e.preventDefault();
+      this.click();
+    }.bind(this));
+  },
+
+  click: function() {
+    var enabled = this.el.hasClass(this.options.classOn);
+    this.fireEvent('click');
+    new Request({
+      url: enabled ? this.options.linkOff : this.options.linkOn,
+      onComplete: function(data) {
+        this.setTip(!enabled);
+        this.fireEvent('complete', !enabled);
+      }.bind(this)
+    }).get();
+  },
+
+  setTip: function(enabled) {
+    if (enabled) {
+      this.el.removeClass(this.options.classOff);
+      this.el.addClass(this.options.classOn);
+      Ngn.Element.setTip(this.el, this.options.titleOff);
+      if (this.text) this.text.set('text', this.options.titleOff);
+    } else {
+      this.el.removeClass(this.options.classOn);
+      this.el.addClass(this.options.classOff);
+      Ngn.Element.setTip(this.el, this.options.titleOn);
+      if (this.text) this.text.set('text', this.options.titleOn);
+    }
+  }
+
+});
+
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.EmptyError.js|--*/
+Ngn.EmptyError = new Class({
+  Extends: Error,
+
+  initialize: function(v) {
+    this.message = '"' + v + '" can not be empty';
+  }
+
+});
+
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/grid/Ngn.Grid.js|--*/
+/**
+ * Компонент для вывода и редактирования табличных данных
+ */
+Ngn.Grid = new Class({
+  Extends: Ngn.Items.Table,
+
+  options: {
+    //data: {
+    //  head: [ 'title1' ],
+    //  body: [ { tools: {}, data: [] } ]
+    //},
+    isSorting: false,
+    tools: {},
+    formatters: {},
+    itemElementSelector: 'tbody .item',
+    checkboxes: false,
+    filterPath: null,
+    id: null,
+    toolActions: {},
+    toolLinks: {},
+    eParent: 'table',
+    fromDialog: false,
+    listAction: null,
+    listAjaxAction: 'json_getItems',
+    addAjaxAction: '/json_new',
+    valueContainerClass: 'v',
+    basePath: window.location.pathname,
+    resizeble: false,
+    search: false,
+    requestOptions: {} // [Object] Опции AJAX запроса
+  },
+
+  btns: {},
+
+  init: function() {
+    if (!this.options.eParent) throw new Ngn.EmptyError('this.options.eParent');
+    if (this.options.basePath == '/') this.options.basePath = '';
+    if (this.options.basePath && !this.options.id) this.options.id = Ngn.String.hashCode(this.options.basePath);
+    this.eParent = $(this.options.eParent);
+    this.initMenu();
+    if (this.options.search) new Ngn.Grid.Search(this);
+    this.options.eItems = Elements.from('<table width="100%" cellpadding="0" cellspacing="0" class="items itemsTable' + (this.options.resizeble ? ' resizeble' : '') + '"><thead><tr></tr></thead><tbody></tbody></table>')[0].inject(this.eParent);
+    this.eHeadTr = this.options.eItems.getElement('thead tr');
+    if (this.options.checkboxes) {
+      Elements.from('<th class="tools"><input type="checkbox" id="checkAll" title="Выделить всё" class="tooltip" /></th>')[0].inject(this.eHeadTr);
+    } else {
+      Elements.from('<th></th>')[0].inject(this.eHeadTr);
+    }
+    if (this.options.data) this.initInterface(this.options.data);
+  },
+
+  initMenu: function() {
+    var grid = this, action;
+    this.eMenu = Elements.from('<div class="itemsTableMenu dgray"><div class="clear"></div></div>')[0].inject(this.eParent);
+    if (!this.options.menu) return;
+    for (var i = 0; i < this.options.menu.length; i++) {
+      (function() {
+        var v = grid.options.menu[i];
+        var keys = Object.keys(v.action);
+        if (keys.length && Ngn.Arr.inn('$constructor', keys)) {
+          // класс Ngn.GridBtnAction.*
+          action = new v.action(grid);
+          action.id = v.cls;
+        } else {
+          if (typeof(v.action) == 'function') {
+            // ф-я function(grid) {}
+            action = { action: v.action };
+          } else {
+            action = v.action ? { action: v.action } : null;
+          }
+          if (action) {
+            action.id = v.cls;
+            action.args = grid;
+          }
+        }
+        var cls = v.cls;
+        v.cls = 'btn ' + v.cls;
+        grid.btns[cls] = new Ngn.Btn(Ngn.Btn.btn(v).inject(this.eMenu, 'top'), action, v.options || {});
+      }.bind(this))();
+    }
+  },
+
+  dataLoaded: function(data) {
+    this.options.data = data;
+    this.init();
+    this.initInterface(this.options.data);
+  },
+
+  initThSizes: function() {
+    this.eHeadTr.getElements('th').each(function(el) {
+      el.setStyle('width', el.getSize().x + 'px');
+    });
+  },
+
+  getLink: function(ajax) {
+    var action = ajax ? this.options.listAjaxAction : this.options.listAction;
+    return this.options.basePath + (action ? '/' + action : '') + (this.options.filterPath ? this.options.filterPath.toPathString() : '') + (this.currentPage == 1 ? '' : '/pg' + this.currentPage);
+  },
+
+  prepareListResult: function(r) {
+    return r;
+  },
+
+  reload: function(itemId, skipLoader) {
+    if (itemId && !skipLoader) this.loading(itemId, true); // показываем, что строчка обновляется
+    Ngn.Request.Iface.loading(true);
+    new Ngn.Request.JSON(Object.merge({
+      url: this.getLink(true),
+      onComplete: function(r) {
+        r = this.prepareListResult(r);
+        if (!this.options.fromDialog) {
+          if (window.history.pushState) window.history.pushState(null, null, this.getLink(false));
+        }
+        this.initInterface(r, true);
+        this.fireEvent('reloadComplete', r);
+        Ngn.Request.Iface.loading(false);
+        this.rowFlash(itemId);
+      }.bind(this)
+    }, this.options.requestOptions)).get();
+    return this;
+  },
+
+  rowFlash: function(itemId) {
+    if (!this.esItems[itemId]) return;
+    var fx = new Fx.Tween(this.esItems[itemId], {
+      duration: 200,
+      onComplete: function() {
+        fx.setOptions({duration: 3000});
+        fx.start('background-color', '#FFFFFF');
+      }
+    });
+    fx.start('background-color', '#FFB900');
+  },
+
+  initInterface: function(data, fromAjax) {
+    if (data.head) this.initHead(data.head);
+    if (data.body) this.initBody(data.body);
+    if (data.pagination) this.initPagination(data.pagination, fromAjax);
+    this.initItems();
+    if (this.options.resizeble) {
+      if (!this.options.id) throw new Ngn.EmptyError('this.options.id');
+      this.resizeble = new Ngn.Grid.Resizeble(this);
+      window.addEvent('resize', function() {
+        this.resizeble.resizeLastCol();
+      }.bind(this));
+    }
+  },
+
+  initHead: function(head) {
+    head = Ngn.Object.fromArray(head);
+    this.esTh = [];
+    this.eHeadTr.set('html', '');
+    new Element('th').inject(this.eHeadTr);
+    for (var i in head) {
+      var eTh = new Element('th', {html: head[i]}).inject(this.eHeadTr);
+      this.esTh[i] = eTh;
+    }
+    return this;
+  },
+
+  initBody: function(rows) {
+    if (!rows) throw new Ngn.EmptyError('rows');
+    rows = Ngn.Object.fromArray(rows);
+    var eBody = this.options.eItems.getElement('tbody');
+    eBody.set('html', '');
+    for (var k in rows) {
+      var row = rows[k];
+      if (!row.data) throw new Error('Row ' + k + ' has no data');
+      var eRow = new Element('tr', {
+        'class': 'item' + (row.rowClass ? ' ' + row.rowClass : ''),
+        'id': 'item_' + row.id,
+        'data-id': row.id
+      }).inject(eBody);
+      var eTools = new Element('td', {
+        'class': 'tools',
+        'html': '<table cellpadding="0" cellspacing="0"><tr></tr></table>'
+      }).inject(eRow);
+      eTools = eTools.getElement('tr');
+      row.el = eRow;
+      row.eTools = eTools;
+      if (this.options.checkboxes) {
+        Elements.from('<td><input type="checkbox" name="itemIds[]" value="' + row.id + '"/></td>')[0].inject(eTools);
+      } else {
+        Elements.from('<td></td>')[0].inject(eTools);
+      }
+      if (this.options.isSorting) Elements.from('<td><div class="dragBox"></div></td>')[0].inject(eTools);
+      var n = 0;
+      for (var index in Ngn.Object.fromArray(row.data)) {
+        var scalar = !(typeOf(row.data[index]) == 'object' || typeOf(row.data[index]) == 'array');
+        var prop = {};
+        if (!scalar) {
+          var value = row.data[index][0];
+          prop['class'] = row.data[index][1];
+        } else {
+          value = row.data[index];
+        }
+        if (this.options.formatters[index]) value = this.options.formatters[index]();
+        // prop.html = this.replaceHtmlValue(value);
+        prop.html = value;
+        new Element('td', prop).
+          addClass('n_' + index).
+          addClass(this.options.valueContainerClass).set('data-n', n).inject(eRow);
+        n++;
+      }
+      var tools = Object.merge(row.tools || {}, this.options.tools);
+      row.tools = Ngn.Object.fromArray(tools);
+      for (var toolName in row.tools) {
+        this.createToolBtn(toolName, row);
+      }
+    }
+    return this;
+  },
+
+  currentPage: 1,
+
+  replaceLink: function(link, ajax) {
+    if (ajax) {
+      return link.replace(new RegExp('/' + this.options.listAjaxAction + '/', 'g'), this.options.listAction ? '/' + this.options.listAction + '/' : '/');
+    } else {
+      return link.replace(new RegExp('/' + this.options.listAction + '/', 'g'), '/' + this.options.listAjaxAction + '/');
+    }
+  },
+
+  initPagination: function(data, fromAjax) {
+    if (this.ePagination) this.ePagination.dispose();
+    this.ePagination = Elements.from('<div class="pNums"><div class="bookmarks">' + data.pNums + '</div></div>')[0].inject(this.eMenu, 'top');
+    new Element('div', {
+      'class': 'total help',
+      title: Ngn.Locale.get('core.totalItemsCount'),
+      html: data.itemsTotal
+    }).inject(this.ePagination);
+    this.ePagination.getElements('a').each(function(el) {
+      if (!fromAjax) return;
+      el.store('href', el.get('href'));
+      el.set('href', this.replaceLink(el.get('href'), fromAjax));
+      el.addEvent('click', function(e) {
+        Ngn.Request.Iface.loading(true);
+        this.currentPage = el.get('href').replace(/.*pg(\d+)/, '$1');
+        new Ngn.Request.JSON(Object.merge({
+          url: el.retrieve('href'),
+          onComplete: function(r) {
+            Ngn.Request.Iface.loading(false);
+            this.initInterface(r, true);
+          }.bind(this)
+        }, this.options.requestOptions)).send();
+        return false;
+      }.bind(this));
+    }.bind(this));
+  },
+
+  replaceHtmlValue: function(v) {
+    if (typeof(v) != 'string') return v;
+    return v.replace(new RegExp(this.options.listAjaxAction, 'g'), this.options.listAction);
+  },
+
+  createToolBtn: function(toolName, row, action) {
+    var tool = row.tools[toolName];
+
+
+
+    if (tool.type) {
+      Ngn.Items.toolActions[tool.type].init(this, toolName, row);
+      return;
+    }
+
+    var el = new Element('a', {
+      'href': this.options.toolLinks[toolName] ? this.options.toolLinks[toolName](row) : '#',
+      'class': 'iconBtn ' + ((typeOf(tool) == 'object' && tool.cls) ? tool.cls : toolName),
+      'html': '<i></i>',
+      'title': typeOf(tool) == 'object' ? tool.title : tool
+    }).inject(new Element('td').inject(row.eTools));
+
+    if (typeOf(tool) == 'object') {
+      if (tool.target) el.set('target', tool.target);
+    }
+
+    action = action || this.options.toolActions[toolName] || false;
+
+    if (action) {
+      // Только если экшн определён, биндим на элемент клик (new Ngn.Btn)
+      action = action.bind(this);
+      new Ngn.Btn(el, function() {
+        action(row, this);
+      });
+    }
+    return el;
+  },
+
+  idP: function(id) {
+    var p = {};
+    p[this.options.idParam] = id;
+    return p;
+  }
+
+});
+
+Ngn.Grid.defaultDialogOpts = {
+  width: 500,
+  height: 300,
+  reduceHeight: true
+};
+
+Ngn.Grid.menu = {};
+
+Ngn.GridBtnAction = new Class({
+  Extends: Ngn.Btn.Action,
+  initialize: function(grid) {
+    this.grid = grid;
+    this.classAction = true;
+  }
+});
+
+Ngn.GridBtnAction.New = new Class({
+  Extends: Ngn.GridBtnAction,
+  action: function() {
+    new Ngn.Dialog.RequestForm(this.getDialogOptions());
+  },
+  getDialogOptions: function() {
+    return Object.merge({
+      id: 'CHANGE_ME',
+      dialogClass: 'dialog fieldFullWidth',
+      url: this.grid.options.basePath + this.options.addAjaxAction,
+      title: false,
+      onOkClose: function() {
+        this.grid.reload();
+      }.bind(this)
+    }, Ngn.Grid.defaultDialogOpts)
+  }
+});
+
+Ngn.Grid.menu['new'] = {
+  title: Ngn.Locale.get('Core.create'),
+  cls: 'add',
+  action: Ngn.GridBtnAction.New
+};
+Ngn.Grid.defaultMenu = [Ngn.Grid.menu['new']];
+
+Ngn.Grid.toolActions = {};
+Ngn.Grid.toolActions.edit = function(row, opt) {
+  new Ngn.Dialog.RequestForm(Object.merge({
+    id: 'CHANGE_ME',
+    url: this.options.basePath + '/json_edit?id=' + row.id,
+    width: 500,
+    height: 300,
+    title: false,
+    onOkClose: function() {
+      this.reload(row.id);
+    }.bind(this)
+  }, Ngn.Grid.defaultDialogOpts));
+};
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/grid/Ngn.Grid.Search.js|--*/
+Ngn.Grid.Search = new Class({
+
+  initialize: function(grid) {
+    this.grid = grid;
+    this.init();
+  },
+
+  init: function() {
+    var timeoutId = 0;
+    var eSearch = new Element('input', {
+      placeholder: Ngn.Locale.get('Core.search') //
+        + '...'
+    }).inject(this.grid.eMenu.getElement('.clear'), 'before');
+    eSearch.addEvent('keyup', function() {
+      clearTimeout(timeoutId);
+      timeoutId = this.loadSearchResults.delay(1000, this, eSearch.get('value'));
+    }.bind(this));
+  },
+
+  word: null,
+
+  loadSearchResults: function(word) {
+    if (this.word == word) return;
+    this.word = word;
+    Ngn.Request.Iface.loading(true);
+    new Ngn.Request.JSON({
+      url: this.grid.options.basePath + '/json_search?word=' + word,
+      onComplete: function(r) {
+        this.grid.initInterface(r, true);
+        Ngn.Request.Iface.loading(false);
+      }.bind(this)
+    }).send();
+  }
+
+});
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/grid/Ngn.Grid.Resizeble.js|--*/
+Ngn.Grid.Resizeble = new Class({
+  Implements: [Options, Events],
+
+  firstResizebleColN: 1,
+  defaultColWidth: 50,
+  debug: false,
+  maxColWidth: 350,
+
+  /**
+   * @param Ngn.Grid
+   * @param options
+   */
+  initialize: function(grid, options) {
+    this.setOptions(options);
+    this.grid = grid;
+    if (this.debug) this.addDubugCells();
+    this.initWrappers();
+    this.initHandlers();
+  },
+
+  getTrParsents: function() {
+    return this.grid.eParent.getChildren('table').getChildren()[0];
+  },
+
+  getWrWidth: function(n) {
+    var w = Ngn.Storage.get('gridColWidth' + this.grid.options.id + n);
+    if (w > this.options.maxColWidth) w = this.options.maxColWidth;
+    return w || this.defaultColWidth;
+  },
+
+  getRows: function() {
+    var rows = [];
+    this.getTrParsents().each(function(el) {
+      el.getChildren().each(function(eTr) {
+        if (eTr.hasClass('debug')) return;
+        rows.push(eTr);
+      });
+    });
+    return rows;
+  },
+
+  initWrappers: function() {
+    this.getRows().each(function(eTr) {
+      eTr.getChildren().each(function(eTd, n) {
+        if (n < this.firstResizebleColN) return;
+        var html = eTd.get('html');
+        eTd.set('html', '');
+        if (this.debug) this.debugCells[n].set('html', this.getWrWidth(n));
+        new Element('div', {
+          html: '<div class="cont">' + html + '</div>',
+          'class': 'wr',
+          styles: {
+            width: this.getWrWidth(n) + 'px'
+          }
+        }).inject(eTd);
+      }.bind(this));
+    }.bind(this));
+  },
+
+  initHandlers: function() {
+    this.cols = this.getTrParsents()[0].getChildren()[0].getChildren('th');
+    this.cols.each(function(eTh, n) {
+      if (n < this.firstResizebleColN + 1) return;
+      var eHandler = new Element('div', {
+        'class': 'handler'
+      }).inject(eTh, 'top');
+      var col = new Ngn.Grid.Resizeble.Col(this, n, eHandler);
+      if (n == this.cols.length - 1) this.resizebleLastCol = col;
+    }.bind(this));
+    this.resizeLastCol();
+  },
+
+  resizeLastCol: function() {
+    if (this.resizebleLastCol) this.resizebleLastCol.resizeLast();
+  },
+
+  debugCells: [],
+
+  addDubugCells: function() {
+    var eTbody = this.getTrParsents()[1];
+    var cols = eTbody.getChildren()[0].getChildren();
+    var eTr = new Element('tr', {'class': 'debug'});
+    eTr.inject(eTbody);
+    for (var i = 0; i < cols.length; i++) {
+      this.debugCells[i] = new Element('td').inject(eTr);
+    }
+  }
+
+});
+
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/grid/Ngn.Grid.Resizeble.Col.js|--*/
+Ngn.Grid.Resizeble.Col = new Class({
+
+  initialize: function(resizeble, colN, eHandler) {
+    this.resizeble = resizeble;
+    if (!this.resizeble.grid.options.id) throw new Error('cat use resizeble on grid without id option');
+    this.colN = colN;
+    this.drag = new Drag(new Element('div'), {
+      handle: eHandler,
+      onStart: function(el, e) {
+        this.startPosition = e.page.x;
+        this.startW = this.getElements(1)[0].getSize().x;
+      }.bind(this),
+      onDrag: function(el, e) {
+        var delta = this.startPosition - e.page.x;
+        var els = this.getElements(1);
+        for (var i = 0; i < els.length; i++) {
+          var w = this.startW - delta;
+          if (!els[i]) throw new Error('why?');
+          els[i].setStyle('width', w + 'px');
+          if (this.resizeble.debug) this.resizeble.debugCells[this.colN - 1].set('html', w);
+        }
+        this.resizeble.resizeLastCol();
+      }.bind(this),
+      onComplete: function() {
+        Ngn.Storage.set('gridColWidth' + this.resizeble.grid.options.id + (this.colN - 1), parseInt(this.getElements(1)[0].getStyle('width')));
+      }.bind(this),
+      snap: 0
+    });
+  },
+
+  getMaxParentWidth: function() {
+    var x1 = window.getSize().x;
+    var x2 = this.resizeble.grid.eParent.getSize().x;
+    return x1 < x2 ? x1 : x2;
+  },
+
+  resizeLast: function() {
+    if (this.colN != this.resizeble.cols.length - 1) throw new Error('U can not use this method on non last col (' + this.colN + '). Total: ' + this.resizeble.cols.length);
+    var els = this.getElements();
+    var display = els[0].getStyle('display');
+    this.setColCellsStyle('display', 'none');
+    var parentWithoutLastColW = this.getMaxParentWidth();
+    var tableW = this.resizeble.grid.eParent.getElement('table').getSize().x;
+    this.setColCellsStyle('display', display);
+    this.setColCellsStyle('width', parentWithoutLastColW - tableW);
+  },
+
+  setColCellsStyle: function(k, v) {
+    var els = this.getElements();
+    for (var i = 0; i < els.length; i++) els[i].setStyle(k, v);
+  },
+
+  getElements: function(offset) {
+    var els = [];
+    offset = offset || 0;
+    this.resizeble.getRows().each(function(eTr) {
+      eTr.getChildren('td,th').each(function(el, n) {
+        if (n == this.colN - offset) {
+          els.push(el.getElement('.wr'));
+        }
+      }.bind(this));
+    }.bind(this));
+    return els;
+  }
+
+});
+
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/core/Ngn.Object.js|--*/
+Ngn.Object = {};
+
+Ngn.Object.fromString = function(s, value) {
+  var a = s.split('.');
+  for (var i = 0; i < a.length; i++) {
+    var ss = a.slice(0, i + 1).join('.');
+    eval('var def = ' + ss + ' === undefined');
+    if (def) eval((i == 0 ? 'var ' : '') + ss + ' = {}');
+  }
+  if (value) eval(s + ' = value');
+};
+
+Ngn.Object.fromArray = function(arr) {
+  if (typeOf(arr) == 'object') return arr;
+  var r = {};
+  for (var i = 0; i < arr.length; ++i) r[i] = arr[i];
+  return r;
+};
+
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.RequestForm.js|--*/
 Ngn.Dialog.RequestFormBase = new Class({
   Extends: Ngn.Dialog,
 
@@ -12261,9 +13567,9 @@ Ngn.Dialog.RequestForm.Static = new Class({
   }
 
 });
-/*--|/home/user/www/chat-client/ngn-env/ngn/more/scripts/js/locale.php| (with request data)--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/more/scripts/js/locale.php| (with request data)--*/
 Locale.define("ru-RU", "Form", {"fileNotChosen":"\u0424\u0430\u0439\u043b \u043d\u0435 \u0432\u044b\u0431\u0440\u0430\u043d","images":"\u0418\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u044f"});
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/form/Ngn.Form.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/form/Ngn.Form.js|--*/
 /**
  * Класс `Ngn.Form` в паре с серверным PHP классом `Form` образует свзяку для работы с HTML-формами
  *
@@ -12964,7 +14270,7 @@ Form.Validator.addAllThese([['should-be-changed', {
   }
 }]]);
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/form/Ngn.PlaceholderSupport.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/form/Ngn.PlaceholderSupport.js|--*/
 Ngn.PlaceholderSupport = new Class({
 
   initialize : function(els){
@@ -13021,7 +14327,7 @@ Ngn.PlaceholderSupport = new Class({
   }
 
 });
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/Ngn.Milkbox.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/Ngn.Milkbox.js|--*/
 (function() {
 
   var milkbox_singleton = null;
@@ -14218,7 +15524,7 @@ Ngn.Milkbox.add = function(els, name) {
   }]);
 };
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/form/Ngn.Form.Upload.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/form/Ngn.Form.Upload.js|--*/
 Ngn.Form.Upload = new Class({
   Implements: [Options, Events],
 
@@ -14335,7 +15641,7 @@ Ngn.Form.Upload.Multi = new Class({
 
 });
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/form/Ngn.Request.File.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/form/Ngn.Request.File.js|--*/
 Ngn.progressSupport = ('onprogress' in new Browser.Request);
 
 // Обёртка для Request с поддержкой FormData
@@ -14415,7 +15721,7 @@ Ngn.Request.File = new Class({
 
 });
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/form/Ngn.Form.MultipleFileInput.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/form/Ngn.Form.MultipleFileInput.js|--*/
 Object.append(Element.NativeEvents, {
   dragenter: 2, dragleave: 2, dragover: 2, dragend: 2, drop: 2
 });
@@ -14531,7 +15837,7 @@ Ngn.Form.MultipleFileInput.Adv = new Class({
   }
 
 });
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/form/Ngn.Frm.HeaderToggle.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/form/Ngn.Frm.HeaderToggle.js|--*/
 Ngn.Frm.HeaderToggle = new Class({
   Implements: [Options, Events],
 
@@ -14592,7 +15898,7 @@ Ngn.Frm.headerToggleFx = function(btns) {
     });
   });
 };
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/trash/Ngn.IframeFormRequest.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/trash/Ngn.IframeFormRequest.js|--*/
 Ngn.IframeFormRequest = new Class({
 
   Implements: [Options, Events],
@@ -14676,7 +15982,7 @@ Ngn.IframeFormRequest.JSON = new Class({
   }
   
 });
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Alert.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Alert.js|--*/
 Ngn.Dialog.Alert = new Class({
   Extends: Ngn.Dialog,
 
@@ -14703,7 +16009,7 @@ Ngn.Dialog.Alert = new Class({
   }
 });
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Error.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/dialog/Ngn.Dialog.Error.js|--*/
 Ngn.Dialog.Error = new Class({
   Extends: Ngn.Dialog.Alert,
 
@@ -14719,7 +16025,7 @@ Ngn.Dialog.Error = new Class({
 
 });
 
-/*--|/home/user/www/chat-client/ngn-env/ngn/i/js/ngn/form/Ngn.Frm.Saver.js|--*/
+/*--|C:\www\exp\chat-client\ngn-env/ngn/i/js/ngn/form/Ngn.Frm.Saver.js|--*/
 Ngn.Frm.SaverBase = new Class({
   Implements: [Options],
   

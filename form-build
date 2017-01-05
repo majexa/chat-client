@@ -1,3 +1,0 @@
-#!/bin/bash
-
-php ./ngn-env/run/run.php "new CliAccessArgsSingle('$*', new FormBuilderToolCli, ['runner' => 'form-build'])" form-builder-tool
