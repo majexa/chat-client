@@ -4,6 +4,10 @@ class ChatApi extends ChatApiBasic
     MicroEvent.mixin @
     @initDeliveredLogic()
 
+  request: (path, request, onComplete) ->
+    request.token = @token
+    super(path, request, onComplete)
+
   restart: () ->
     @socket.disconnect()
     @socket.connect()

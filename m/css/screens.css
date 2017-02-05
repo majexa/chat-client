@@ -1,0 +1,19 @@
+body {
+margin: 0;
+}
+.screensFrame {
+overflow: hidden;
+}
+.screen {
+display: block;
+float: left;
+}
+.screens {
+transition-duration: 0.5s;
+}
+.screens.move_left {
+transform: translate3d(0, 0, 0);
+}
+.screens.reset {
+transition-duration: 0s;
+}

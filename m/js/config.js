@@ -1,3 +1,3 @@
 var config = {
-  baseUrl: 'http://185.98.87.28:8080'
+  baseUrl: 'http://majexa.ru:8080'
 };

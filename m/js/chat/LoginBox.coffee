@@ -1,37 +1,43 @@
 class LoginBox
 
   constructor: (@parent) ->
-    @container = new Element('div.loginBox').inject(@parent)
     @createPhoneBox()
     @createCodeBox()
-    @codeBox.setStyle('display', 'none')
+
+
+  titleBox: ->
+    title = new Element('div.title');
+    new Element('div', {html: 'Hi there! Welcome to'}).inject(title);
+    new Element('img', {src: '/m/img/chat-w.svg'}).inject(title);
+    return title
 
   createPhoneBox: ->
-    @phoneBox = new Element('div.phoneBox').inject(@container)
+    @phoneBox = new Element('div.loginBox.phoneBox.form')
+    @titleBox().inject(@phoneBox)
+    new Element('p.label', { html: 'Phone:' }).inject(@phoneBox);
+    new Element('span.input', {html:'+'}).inject(@phoneBox);
     @phoneInput = new Element('input', {
-      placeholder: 'Phone Number',
+      value: '79202560776',
       name: 'phone',
-      type: 'number',
+      type: 'tel',
       maxlength: 11
     }).inject(@phoneBox)
     @sendCodeButton = new Element('button', {
       html: 'Send code to sms'
     }).inject(@phoneBox)
-    new Element('a', {
-      href: '#',
-      html: '<p>I already have the code</p>'
-    }).addEvent('click', ((e)->
-      e.preventDefault()
+    new Element('button.pseudo', {
+      html: 'I already have the code'
+    }).addEvent('click', (()->
       @switchToCodeBox()
     ).bind(@)).inject(@phoneBox)
 
   createCodeBox: ->
-    @codeBox = new Element('div.codeBox').inject(@container)
-    new Element('p', {
+    @codeBox = new Element('div.loginBox.codeBox.form')
+    @titleBox().inject(@codeBox)
+    new Element('p.label', {
       html: 'Input code has sent to you by SMS in field below:'
     }).inject(@codeBox)
     @codeInput = new Element('input', {
-      placeholder: 'Code',
       name: 'code',
       type: 'number',
       maxlength: 4
@@ -39,9 +45,8 @@ class LoginBox
     @loginButton = new Element('button', {
       html: 'Login'
     }).inject(@codeBox)
-    new Element('a', {
-      href: '#',
-      html: '<p>Go back to phone input</p>'
+    new Element('button.pseudo', {
+      html: '&#8701; Go back to phone input'
     }).addEvent('click', (->
       @switchToLoginBox()
     ).bind(@)).inject(@codeBox)
@@ -56,11 +61,9 @@ class LoginBox
     if !@phoneInput.get('value')
       alert('Phone is required')
       return
-    @phoneBox.setStyle('display', 'none')
-    @codeBox.setStyle('display', 'block')
+    screens.changeScreen(@codeBox)
 
   switchToLoginBox: ->
-    @phoneBox.setStyle('display', 'block')
-    @codeBox.setStyle('display', 'none')
+    screens.changeScreen(@phoneBox, 'left')
 
 window.LoginBox = LoginBox

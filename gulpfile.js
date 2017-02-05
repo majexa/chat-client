@@ -52,5 +52,11 @@ gulp.task('dev', function() {
       index: 'index.html'
     }
   });
-  gulp.watch(['m/js/*.js', 'm/js/cache/*.js', 'm/js/chat/*.js', 'm/css/*.css', 'index.html']).on('change', browserSync.reload);
+  gulp.watch([
+    'm/js/*.js',
+    'm/js/cache/*.js',
+    'm/js/chat/*.js',
+    'm/css/*.css',
+    'index.html'
+  ]).on('change', browserSync.reload);
 });

@@ -1,0 +1,30 @@
+.loginBox {
+box-sizing: border-box;
+padding: 100px 150px;
+text-align: center;
+background: #61b534;
+height: 100%;
+background: no-repeat url(/m/img/bg.png);
+background-size: cover;
+}
+.loginBox img {
+float: right;
+width: 40%;
+text-align: right;
+}
+.loginBox .title div {
+margin-top: 50px;
+float: left;
+width: 50%;
+}
+.loginBox .title {
+opacity: 0.9;
+width: 100%;
+display: inline-block;
+text-align: left;
+float: left;
+color: #fff;
+font-family: 'Boblic';
+font-size: 70px;
+margin-bottom: 70px;
+}

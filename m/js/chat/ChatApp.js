@@ -4,13 +4,17 @@
 
   ChatApp = (function() {
     function ChatApp(config) {
-      var api, listBox, matchChatWithUser, user;
+      var api, listBox, loginBoxConnect, matchChatWithUser, screen, user;
       this.config = config;
       user = Ngn.LocalStorage.json.get('user');
       if (!user) {
-        new LoginBoxConnect(new ChatApiBasic(this.config), new LoginBox(document.getElement('body')));
+        loginBoxConnect = new LoginBoxConnect(new ChatApiBasic(this.config), new LoginBox(document.getElement('body')));
         return;
       }
+      screen = new ChatContactsScreen(new ChatApi(user.token, this.config));
+      window.screens = new Screens(document.getElement('body'), screen.container);
+      return;
+      window.screens = new Screens(document.getElement('body'), loginBoxConnect.loginBox.phoneBox);
       matchChatWithUser = window.location.hash.match(/#(\d+)/);
       if (matchChatWithUser) {
         listBox = new UsersListBox(user, false, document.getElement('body'));

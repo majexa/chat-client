@@ -10,6 +10,7 @@ class UsersListConnect
 
   onStart: ->
     @loadContactsFromMessages()
+    @loadChatList()
     @waitForNewUserMessages()
 
   loadContactsFromMessages: ->
@@ -19,6 +20,26 @@ class UsersListConnect
       for userId in userIds
         @addToNewUsersList(userId, 0)
     ).bind(@))
+
+  loadChatList: ->
+
+    @chatApi.request('user/chats', {
+      token: @chatApi.token
+    }, ((chats)->
+      for chat in chats
+        console.log('CHAT: ' + chat.chatId);
+
+#        new Element('div', {
+#          html: chat.chatId
+#        }).inject(@usersListBox)
+#        #
+
+
+
+
+
+    ).bind(@))
+
 
   waitForNewUserMessages: ->
     @chatApi.bind('newUserMessages', ((data) ->
