@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "ChatContactsScreen.js",
+  "sourceRoot": "",
+  "sources": [
+    "ChatContactsScreen.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA;AAAA,MAAA,kBAAA;IAAA;;;EAAM;;;;;;;iCAEJ,IAAA,GAAM,SAAA;aACJ,IAAC,CAAA,GAAG,CAAC,OAAL,CAAa,cAAb,EAA6B,EAA7B,EAAiC,SAAC,CAAD;eAC/B,OAAO,CAAC,GAAR,CAAY,CAAZ;MAD+B,CAAjC;IADI;;;;KAFyB;;EAOjC,MAAM,CAAC,kBAAP,GAA4B;AAP5B"
+}

@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "UsersListByPhoneConnect.js",
+  "sourceRoot": "",
+  "sources": [
+    "UsersListByPhoneConnect.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA;AAAA,MAAA,uBAAA;IAAA;;;EAAM;;;;;;;;;KAAgC;;EAEtC,MAAM,CAAC,uBAAP,GAAiC;AAFjC"
+}

@@ -4,13 +4,13 @@ class ChatApp
     user = Ngn.LocalStorage.json.get('user')
     if !user
       loginBoxConnect = new LoginBoxConnect(new ChatApiBasic(@config), new LoginBox(document.getElement('body')))
+      window.screens = new Screens(document.getElement('body'), loginBoxConnect.loginBox.phoneBox);
       return
 
     screen = new ChatContactsScreen(new ChatApi(user.token, @config))
     window.screens = new Screens(document.getElement('body'), screen.container);
     return
 
-    window.screens = new Screens(document.getElement('body'), loginBoxConnect.loginBox.phoneBox);
     matchChatWithUser = window.location.hash.match(/#(\d+)/)
     if matchChatWithUser
       listBox = new UsersListBox(user, false, document.getElement('body'))

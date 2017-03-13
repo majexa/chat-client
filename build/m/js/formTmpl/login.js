@@ -1,0 +1,2 @@
+Ngn.toObj("Ngn.formTmpl.login", '\
+<div class="apeform"><form action="" id="f21a2fc468b0b09820b8e97727d41e1ad" method="post"><div class="element row_phone type_phone name_phone" data-name="phone" data-typejs="1"><p class="label"><span class="ttl">Phone</span><span>:</span></p><div class="field-wrapper"><input size="40" type="text" id="phonei" maxlength="255" name="phone" value="+{%phone%}" class="validate-phone" /></div><div class="help">Формат: +71234567890</div><div class="clear"></div></div><div class="clear"></div></form></div>');

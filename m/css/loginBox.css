@@ -1,10 +1,22 @@
+.loginBox, .loginBox input, .loginBox button {
+font-size: 50px;
+}
+.loginBox input  {
+padding: 10px;
+margin-bottom: 5px;
+}
+.loginBox button {
+width: 100%;
+padding: 10px;
+margin-bottom: 5px;
+}
 .loginBox {
 box-sizing: border-box;
 padding: 100px 150px;
 text-align: center;
 background: #61b534;
 height: 100%;
-background: no-repeat url(/m/img/bg.png);
+background: no-repeat url(/m/img/bg.jpg);
 background-size: cover;
 }
 .loginBox img {

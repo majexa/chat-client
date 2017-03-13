@@ -1,0 +1,3 @@
+class UsersListByPhoneConnect extends UsersListConnect
+
+window.UsersListByPhoneConnect = UsersListConnect

@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "ChatScreen.js",
+  "sourceRoot": "",
+  "sources": [
+    "ChatScreen.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA;AAAA,MAAA;;EAAM;IAES,oBAAC,GAAD;MAAC,IAAC,CAAA,MAAD;MACZ,IAAC,CAAA,SAAD,GAAiB,IAAA,OAAA,CAAQ,KAAR;MACb,IAAA,OAAA,CAAQ,YAAR,CAAqB,CAAC,MAAtB,CAA6B,IAAC,CAAA,SAA9B;MACJ,IAAC,CAAA,IAAD,CAAA;IAHW;;yBAKb,IAAA,GAAM,SAAA,GAAA;;;;;;EAER,MAAM,CAAC,UAAP,GAAoB;AATpB"
+}
